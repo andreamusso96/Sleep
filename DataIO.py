@@ -143,6 +143,7 @@ class DataIO:
         times = [day_dt + timedelta(minutes=15 * i) for i in range(96)]
         cols = ['tile_id'] + [t.strftime('%H:%M') for t in times]
         traffic_data = pd.read_csv(file_path, sep=' ', names=cols)
+        traffic_data.set_index('tile_id', inplace=True)
         return traffic_data
 
     @staticmethod
