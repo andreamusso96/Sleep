@@ -1,5 +1,9 @@
 from datetime import date, datetime, timedelta
+from typing import Tuple
 from enum import Enum
+import xarray as xr
+import numpy as np
+from tqdm import tqdm
 
 import pandas as pd
 
@@ -135,21 +139,122 @@ class Service(Enum):
     YAHOO = 'Yahoo'
 
 
+class TrafficType(Enum):
+    DL = 'DL'
+    UL = 'UL'
+    B = 'B'
+
+
 class DataIO:
     @staticmethod
-    def load_file(city: City, service: Service, day: date, uplink: bool):
-        file_path = DataIO._get_file_path(city=city, service=service, day=day, uplink=uplink)
-        day_dt = datetime(day.year, day.month, day.day)
-        times = [day_dt + timedelta(minutes=15 * i) for i in range(96)]
-        cols = ['tile_id'] + [t.strftime('%H:%M') for t in times]
+    def load_traffic_data(traffic_type: TrafficType, city: City, service: Service=None, day: date=None):
+        if service is None and day is None:
+            return DataIO._city_traffic_data(city=city, traffic_type=traffic_type)
+        elif service is None and day is not None:
+            return DataIO._city_day_traffic_data(city=city, day=day, traffic_type=traffic_type)
+        elif service is not None and day is None:
+            return DataIO._city_service_traffic_data(city=city, service=service, traffic_type=traffic_type)
+        elif service is not None and day is not None:
+            return DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
+        else:
+            raise ValueError('Invalid parameters')
+
+    @staticmethod
+    def _city_traffic_data(city: City, traffic_type: TrafficType):
+        data_vals = []
+        days = DataIO.get_days()
+        for day in days:
+            data_vals_day = []
+            for service in Service:
+                service_data_day = DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
+                data_vals_day.append(service_data_day.values)
+
+            data_vals.append(np.dstack(data_vals_day))
+
+        data = np.dstack(data_vals)
+        coords = {'tile_id': DataIO.get_tile_ids(city=city),
+                  'time': DataIO.get_time_labels(),
+                  'service': [service.value for service in Service],
+                  'day': DataIO.get_day_labels()}
+        dims = ['tile_id', 'time', 'service', 'day']
+        xar = xr.DataArray(data, coords=coords, dims=dims)
+        return xar
+
+    @staticmethod
+    def _city_service_traffic_data(city: City, service: Service, traffic_type: TrafficType):
+        data_vals = []
+        days = DataIO.get_days()
+        for day in days:
+            service_data_day = DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
+            data_vals.append(service_data_day.values)
+
+        data = np.dstack(data_vals)
+        coords = {'tile_id': DataIO.get_tile_ids(city=city),
+                  'time': DataIO.get_time_labels(),
+                  'day': DataIO.get_day_labels()}
+        dims = ['tile_id', 'time', 'day']
+        xar = xr.DataArray(data, coords=coords, dims=dims)
+        return xar
+
+    @staticmethod
+    def _city_day_traffic_data(city: City, day: date, traffic_type: TrafficType):
+        data_vals = []
+        for service in Service:
+            service_data = DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
+            data_vals.append(service_data.values)
+
+        data = np.dstack(data_vals)
+        coords = {'tile_id': DataIO.get_tile_ids(city=city),
+                  'time': DataIO.get_time_labels(),
+                  'service': [service.value for service in Service]}
+        dims = ['tile_id', 'time', 'service']
+        xar = xr.DataArray(data, coords=coords, dims=dims)
+        return xar
+
+    @staticmethod
+    def _city_service_day_traffic_data(city: City, service: Service, day: date, traffic_type: TrafficType):
+        if traffic_type == TrafficType.DL:
+            return DataIO._load_traffic_data_file(city=city, service=service, day=day, uplink=False)
+        elif traffic_type == TrafficType.UL:
+            return DataIO._load_traffic_data_file(city=city, service=service, day=day, uplink=True)
+        elif traffic_type == TrafficType.B:
+            ul_data = DataIO._load_traffic_data_file(city=city, service=service, day=day, uplink=True)
+            dl_data = DataIO._load_traffic_data_file(city=city, service=service, day=day, uplink=False)
+            return ul_data + dl_data
+
+    @staticmethod
+    def _load_traffic_data_file(city: City, service: Service, day: date, uplink: bool):
+        file_path = DataIO._get_traffic_data_file_path(city=city, service=service, day=day, uplink=uplink)
+        cols = ['tile_id'] + DataIO.get_time_labels()
         traffic_data = pd.read_csv(file_path, sep=' ', names=cols)
+        traffic_data.set_index('tile_id', inplace=True)
         return traffic_data
 
     @staticmethod
-    def _get_file_path(city: City, service: Service, day: date, uplink: bool):
+    def _get_traffic_data_file_path(city: City, service: Service, day: date, uplink: bool):
         day_str = day.strftime('%Y%m%d')
         ending = 'UL' if uplink else 'DL'
         path = f'{DATA_PATH}/{city.value}/{service.value}/{day_str}/'
         file_name = f'{city.value}_{service.value}_{day_str}_{ending}.txt'
         file_path = path + file_name
         return file_path
+
+    @staticmethod
+    def get_time_labels():
+        times = [(datetime(2023, 1, 1) + timedelta(minutes=15 * i)).strftime('%H:%M') for i in range(96)]
+        return times
+
+    @staticmethod
+    def get_day_labels():
+        days = DataIO.get_days()
+        day_labels = [day.strftime('%Y-%m-%d') for day in days]
+        return day_labels
+
+    @staticmethod
+    def get_tile_ids(city: City):
+        data = DataIO._load_traffic_data_file(city=city, service=Service.FACEBOOK_MESSENGER, day=date(2019, 3, 20), uplink=True)
+        return data.index
+
+    @staticmethod
+    def get_days():
+        return [date(2019, 3, 16) + timedelta(days=i) for i in range(77)]
