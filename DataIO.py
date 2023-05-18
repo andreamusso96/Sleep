@@ -163,7 +163,7 @@ class DataIO:
     def _city_traffic_data(city: City, traffic_type: TrafficType):
         data_vals = []
         days = DataIO.get_days()
-        for day in days:
+        for day in tqdm(days):
             data_vals_day = []
             for service in Service:
                 service_data_day = DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
@@ -184,7 +184,7 @@ class DataIO:
     def _city_service_traffic_data(city: City, service: Service, traffic_type: TrafficType):
         data_vals = []
         days = DataIO.get_days()
-        for day in days:
+        for day in tqdm(days):
             service_data_day = DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
             data_vals.append(service_data_day.values)
 
@@ -199,7 +199,7 @@ class DataIO:
     @staticmethod
     def _city_day_traffic_data(city: City, day: date, traffic_type: TrafficType):
         data_vals = []
-        for service in Service:
+        for service in tqdm(Service):
             service_data = DataIO._city_service_day_traffic_data(city=city, service=service, day=day, traffic_type=traffic_type)
             data_vals.append(service_data.values)
 
