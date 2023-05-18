@@ -162,13 +162,10 @@ class DataIO:
 
     @staticmethod
     def _city_traffic_data(city: City, traffic_type: TrafficType):
-        data_vals = []
         days = DataIO.get_days()
-        for day in tqdm(days):
-            data_vals_day = Parallel(n_jobs=N_CORES)(delayed(DataIO._city_service_day_traffic_data)(city=city, service=service, day=day, traffic_type=traffic_type) for service in Service)
-            data_vals.append(np.dstack(data_vals_day))
-
-        data = np.dstack(data_vals)
+        day_service_pairs = [(day, service) for day in days for service in Service]
+        data_vals = Parallel(n_jobs=N_CORES)(delayed(DataIO._city_service_day_traffic_data)(city=city, service=service, day=day, traffic_type=traffic_type).values for day, service in day_service_pairs)
+        data = np.stack([np.stack(data_vals[i: i + len(Service)], axis=-1) for i in range(0, len(data_vals), len(Service))], axis=-1)
         coords = {'tile_id': DataIO.get_tile_ids(city=city),
                   'time': DataIO.get_time_labels(),
                   'service': [service.value for service in Service],
@@ -180,8 +177,8 @@ class DataIO:
     @staticmethod
     def _city_service_traffic_data(city: City, service: Service, traffic_type: TrafficType):
         days = DataIO.get_days()
-        data_vals = Parallel(n_jobs=N_CORES)(delayed(DataIO._city_service_day_traffic_data)(city=city, service=service, day=day, traffic_type=traffic_type) for day in days)
-        data = np.dstack(data_vals)
+        data_vals = Parallel(n_jobs=N_CORES)(delayed(DataIO._city_service_day_traffic_data)(city=city, service=service, day=day, traffic_type=traffic_type).values for day in days)
+        data = np.stack(data_vals, axis=-1)
         coords = {'tile_id': DataIO.get_tile_ids(city=city),
                   'time': DataIO.get_time_labels(),
                   'day': DataIO.get_day_labels()}
@@ -191,8 +188,8 @@ class DataIO:
 
     @staticmethod
     def _city_day_traffic_data(city: City, day: date, traffic_type: TrafficType):
-        data_vals = Parallel(n_jobs=N_CORES)(delayed(DataIO._city_service_day_traffic_data)(city=city, service=service, day=day, traffic_type=traffic_type) for service in Service)
-        data = np.dstack(data_vals)
+        data_vals = Parallel(n_jobs=N_CORES)(delayed(DataIO._city_service_day_traffic_data)(city=city, service=service, day=day, traffic_type=traffic_type).values for service in Service)
+        data = np.stack(data_vals, axis=-1)
         coords = {'tile_id': DataIO.get_tile_ids(city=city),
                   'time': DataIO.get_time_labels(),
                   'service': [service.value for service in Service]}
