@@ -4,8 +4,8 @@ from joblib import Parallel, delayed
 import pandas as pd
 import xarray as xr
 
-from SleepClassifier import SleepClassifier
-from SleepPreprocessor import SleepPreprocessor
+from SleepInference.SleepClassifier import SleepClassifier
+from SleepInference.SleepPreprocessor import SleepPreprocessor
 from Utils import City
 
 
@@ -15,7 +15,7 @@ class SleepDetector:
         self.city = city
         self.window = window
 
-    def calculate_sleep_tile_time_day(self):
+    def calculate_sleep_tile_time_day(self) -> xr.DataArray:
         sleep_preprocessor = SleepPreprocessor(xar_city=self.xar_city, city=self.city)
         time_series = sleep_preprocessor.preprocess()
         sleep_data_tiles = Parallel(n_jobs=-1)(delayed(self.classify_sleep_habits_tile)(time_series[tile_id].to_frame(), window=self.window) for tile_id in time_series.columns)
@@ -28,7 +28,7 @@ class SleepDetector:
         return sleep_data
 
     @staticmethod
-    def classify_sleep_habits_tile(time_series_tile: pd.DataFrame, window: int):
+    def classify_sleep_habits_tile(time_series_tile: pd.DataFrame, window: int) -> np.ndarray:
         sleep_classifier = SleepClassifier(data=time_series_tile, window=window)
         sleep_data = sleep_classifier.cluster()
         sleep_data.reset_index(inplace=True)
