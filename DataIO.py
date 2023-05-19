@@ -87,7 +87,7 @@ class DataIO:
     @staticmethod
     def _load_traffic_data_file(city: City, service: Service, day: date, uplink: bool) -> pd.DataFrame:
         file_path = DataIO._get_traffic_data_file_path(city=city, service=service, day=day, uplink=uplink)
-        cols = ['tile_id'] + DataIO.get_times()
+        cols = ['tile_id'] + list(DataIO.get_times())
         traffic_data = pd.read_csv(file_path, sep=' ', names=cols)
         traffic_data.set_index('tile_id', inplace=True)
         return traffic_data
