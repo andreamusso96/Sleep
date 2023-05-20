@@ -2,19 +2,23 @@ import pandas as pd
 import xarray as xr
 
 from Utils import City, Anomalies, Calendar
+from Logging.Loggers import SleepInferenceLogger
 
 
 class SleepPreprocessor:
     def __init__(self, xar_city: xr.DataArray, city: City):
         self.xar_city = xar_city
         self.city = city
+        SleepInferenceLogger.debug(f'SleepPreprocessor: Initialized for {city.value}')
 
     def preprocess(self) -> pd.DataFrame:
+        SleepInferenceLogger.debug(f'SleepPreprocessor: Preprocessing {self.city.value}')
         total_traffic = self.total_traffic()
         total_traffic = self.remove_anomalies(total_traffic=total_traffic, city=self.city)
         total_traffic = self.remove_weekends(total_traffic=total_traffic)
         total_traffic = self.remove_holidays(total_traffic=total_traffic)
         time_series = self.to_time_series_format(total_traffic=total_traffic)
+        SleepInferenceLogger.debug(f'SleepPreprocessor: Preprocessing {self.city.value} complete')
         return time_series
 
     def total_traffic(self) -> xr.DataArray:
