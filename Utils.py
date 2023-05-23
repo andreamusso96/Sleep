@@ -135,6 +135,11 @@ class TrafficType(Enum):
     B = 'B'
 
 
+class AggregationLevel(Enum):
+    TILE = 'tile'
+    IRIS = 'iris'
+
+
 class Calendar:
     @staticmethod
     def holidays() -> List[date]:
