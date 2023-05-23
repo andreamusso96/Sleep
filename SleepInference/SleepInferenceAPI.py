@@ -20,6 +20,6 @@ class SleepInferenceAPI:
         return sleep_tile_time_day
 
     @staticmethod
-    def detect_sleep_patterns(window: int) -> Generator[xr.DataArray]:
+    def detect_sleep_patterns(window: int):
         for city in City:
             yield SleepInferenceAPI.detect_sleep_patterns_city(city=city, window=window)

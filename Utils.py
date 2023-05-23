@@ -7,7 +7,6 @@ class City(Enum):
     BORDEAUX = 'Bordeaux'
     CLERMONT_FERRAND = 'Clermont-Ferrand'
     DIJON = 'Dijon'
-    FRANCE = 'France'
     GRENOBLE = 'Grenoble'
     LILLE = 'Lille'
     LYON = 'Lyon'
@@ -21,7 +20,6 @@ class City(Enum):
     ORLEANS = 'Orleans'
     PARIS = 'Paris'
     RENNES = 'Rennes'
-    ROUEN = 'Rouen'
     SAINT_ETIENNE = 'Saint-Etienne'
     STRASBOURG = 'Strasbourg'
     TOULOUSE = 'Toulouse'
@@ -48,7 +46,6 @@ class CityDimensions:
         'Orleans': (282, 256),
         'Paris': (409, 346),
         'Rennes': (423, 370),
-        'Rouen': (327, 373),
         'Saint-Etienne': (305, 501),
         'Strasbourg': (296, 258),
         'Toulouse': (280, 347),

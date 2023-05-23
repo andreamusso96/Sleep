@@ -14,22 +14,22 @@ class SleepClassifier:
         self.window = window
         self.time_window = timedelta(minutes=15 * window)
         self.window_half = window // 2
-        SleepInferenceLogger.debug(f'SleepClassifier: Initialized for tile {self.data.columns}')
+        SleepInferenceLogger.debug(f'SleepClassifier: Initialized for tile {self.data.columns[0]}')
 
     def cluster(self) -> pd.DataFrame:
-        SleepInferenceLogger.debug(f'SleepClassifier: Clustering data for tile {self.data.columns}')
+        SleepInferenceLogger.debug(f'SleepClassifier: Clustering data for tile {self.data.columns[0]}')
         SleepInferenceLogger.debug(f'SleepClassifier: Extracting datapoints with window size {self.window}')
         data_datetime_index = self.get_data_with_datetime_index()
         rescaled_data = self.rescale_data(data=data_datetime_index)
         dps = self.generate_datapoints(data=rescaled_data, window=self.window, time_window=self.time_window, window_half=self.window_half)
         centers = self.get_cluster_centers(dps=dps)
-        SleepInferenceLogger.debug(f'SleepClassifier: Running k-means clustering')
+        SleepInferenceLogger.debug(f'SleepClassifier: Running k-means clustering for tile {self.data.columns[0]}')
         labels = self.run_kmeans_clustering(dps=dps, centers=centers)
-        SleepInferenceLogger.debug(f'SleepClassifier: Postprocessing labels')
+        SleepInferenceLogger.debug(f'SleepClassifier: Postprocessing labels for tile {self.data.columns[0]}')
         complete_labels = self.add_back_points_for_which_window_was_to_small(labels=labels, data_with_datetime_index=data_datetime_index)
         complete_labels_no_nas = self.fill_nas(labels=complete_labels)
         labels_with_data_index = self.reset_index_to_data_index(labels=complete_labels_no_nas, data_index=self.data.index)
-        SleepInferenceLogger.debug(f'SleepClassifier: Finished clustering data for tile {self.data.columns}')
+        SleepInferenceLogger.debug(f'SleepClassifier: Finished clustering data for tile {self.data.columns[0]}')
         return labels_with_data_index
 
     def get_data_with_datetime_index(self) -> pd.DataFrame:
