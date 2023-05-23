@@ -1,6 +1,6 @@
 from datetime import date
-from typing import Tuple
 import itertools
+from joblib import Parallel, delayed
 
 import pandas as pd
 from tqdm import tqdm
@@ -15,16 +15,16 @@ class Aggregator:
         self.iris_tile_matching = iris_tile_matching
 
     def aggregate_traffic_data(self):
-        city_service_day_combinations = itertools.product(City, Service, DataIO.get_days())
-        for city, service, day in tqdm(city_service_day_combinations):
-            aggregated_ul_data, aggregated_dl_data = self._aggregate_traffic_city_service_day(city=city, service=service, day=day)
-            DataIO.save_iris_aggregated_traffic_data(data=aggregated_ul_data, traffic_type=TrafficType.UL, city=city, service=service, day=day)
-            DataIO.save_iris_aggregated_traffic_data(data=aggregated_dl_data, traffic_type=TrafficType.DL, city=city, service=service, day=day)
+        city_service_day_combinations = list(itertools.product(City, Service, DataIO.get_days()))
+        Parallel(n_jobs=-1, verbose=1)(delayed(self._aggregate_and_save_traffic_city_service_day)(city=city, service=service, day=day) for city, service, day in city_service_day_combinations)
 
-    def _aggregate_traffic_city_service_day(self, city: City, service: Service, day: date) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def _aggregate_and_save_traffic_city_service_day(self, city: City, service: Service, day: date):
         aggregated_ul_data = self._aggregate_traffic_data_file(city=city, service=service, traffic_type=TrafficType.UL, day=day)
         aggregated_dl_data = self._aggregate_traffic_data_file(city=city, service=service, traffic_type=TrafficType.DL, day=day)
-        return aggregated_ul_data, aggregated_dl_data
+        DataIO.save_iris_aggregated_traffic_data(data=aggregated_ul_data, traffic_type=TrafficType.UL, city=city,
+                                                 service=service, day=day)
+        DataIO.save_iris_aggregated_traffic_data(data=aggregated_dl_data, traffic_type=TrafficType.DL, city=city,
+                                                 service=service, day=day)
 
     def _aggregate_traffic_data_file(self, traffic_type: TrafficType, city: City, service: Service, day: date) -> pd.DataFrame:
         data = DataIO.load_traffic_data(city=city, service=service, traffic_type=traffic_type, day=day, aggregation_level=AggregationLevel.TILE).to_pandas()
@@ -49,6 +49,15 @@ def test():
     agg = Aggregator(iris_tile_matching=IrisTileMatchingAPI.load_matching())
     data = agg._aggregate_traffic_data_file(city=c, service=s, traffic_type=tt, day=d)
     DataIO.save_iris_aggregated_traffic_data(data=data, traffic_type=tt, city=c, service=s, day=d)
+
+
+if __name__ == '__main__':
+    city_service_day_combinations = list(itertools.product(City, Service, DataIO.get_days()))
+    seconds = 2 * len(city_service_day_combinations)
+    minutes = seconds / 60
+    hours = minutes / 60
+    parallel = 12
+    print(hours / parallel)
 
 
 
