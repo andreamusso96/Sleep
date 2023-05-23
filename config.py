@@ -5,7 +5,7 @@ if 'cluster' in os.path.abspath(__file__):
     is_cluster = True
 
 if is_cluster:
-    DATA_PATH = '/cluster/work/gess/coss/users/anmusso'
+    DATA_PATH = '/cluster/work/gess/coss/users/anmusso/NetMob'
 else:
     DATA_PATH = '/Users/anmusso/Desktop/PhD/NetMob/data'
 
