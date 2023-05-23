@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from Utils import City, Service, TrafficType, AggregationLevel
 from DataIO import DataIO
-from IrisTileMatching import IrisTileMatchingAPI, IrisTileMatching
+from IrisAggregation.IrisTileMatching import IrisTileMatchingAPI, IrisTileMatching
 
 
 class Aggregator:
