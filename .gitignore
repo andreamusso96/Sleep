@@ -177,5 +177,6 @@ pyrightconfig.json
 data/
 batch_file.txt
 .DS_Store
+Consulting/
 
 # End of https://www.toptal.com/developers/gitignore/api/python
