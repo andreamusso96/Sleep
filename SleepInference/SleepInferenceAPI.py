@@ -1,4 +1,5 @@
 from typing import Generator
+
 import xarray as xr
 
 from SleepInference.SleepDetector import SleepDetector

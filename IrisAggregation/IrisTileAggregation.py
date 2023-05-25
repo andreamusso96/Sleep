@@ -53,11 +53,11 @@ def test():
 
 if __name__ == '__main__':
     city_service_day_combinations = list(itertools.product(City, Service, DataIO.get_days()))
-    seconds = 2 * len(city_service_day_combinations)
+    seconds_per_combination = 11*60 / 3172
+    seconds = seconds_per_combination * len(city_service_day_combinations)
     minutes = seconds / 60
     hours = minutes / 60
-    parallel = 12
-    print(hours / parallel)
+    print(hours)
 
 
 
