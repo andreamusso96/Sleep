@@ -86,8 +86,8 @@ class DataIO:
     @staticmethod
     def _load_traffic_data_base(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City, service: Service, day: date) -> pd.DataFrame:
         if traffic_type == TrafficType.B:
-            ul_data = DataIO._load_traffic_data_file(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day)
-            dl_data = DataIO._load_traffic_data_file(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day)
+            ul_data = DataIO._load_traffic_data_file(traffic_type=TrafficType.UL, aggregation_level=aggregation_level, city=city, service=service, day=day)
+            dl_data = DataIO._load_traffic_data_file(traffic_type=TrafficType.DL, aggregation_level=aggregation_level, city=city, service=service, day=day)
             return ul_data + dl_data
         else:
             return DataIO._load_traffic_data_file(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day)

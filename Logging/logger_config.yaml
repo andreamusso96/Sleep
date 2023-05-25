@@ -10,7 +10,7 @@ handlers:
     stream: ext://sys.stdout
 loggers:
   SleepInferenceLogger:
-    level: DEBUG
+    level: INFO
     handlers: [console]
     propagate: no
 disable_existing_loggers: False
