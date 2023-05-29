@@ -140,6 +140,12 @@ class AggregationLevel(Enum):
     IRIS = 'iris'
 
 
+class TrafficDataDimensions(Enum):
+    SERVICE = 'service'
+    TIME = 'time'
+    DAY = 'day'
+
+
 class Calendar:
     @staticmethod
     def holidays() -> List[date]:

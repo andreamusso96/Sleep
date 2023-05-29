@@ -7,8 +7,8 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 
-from config import TRAFFIC_DATA_PATH
-from Utils import TrafficType, City, Service, AggregationLevel
+from config import TRAFFIC_DATA_PATH, GEO_DATA_PATH
+from Utils import TrafficType, City, Service, AggregationLevel, TrafficDataDimensions
 
 
 class DataIO:
@@ -32,7 +32,7 @@ class DataIO:
         if not os.path.exists(file_directory):
             os.makedirs(file_directory)
         data.sort_index(inplace=True)
-        data.to_csv(path_or_buf=file_name, sep=' ', index=True, header=False, mode='a')
+        data.to_csv(path_or_buf=file_name, sep=' ', index=True, header=False)
 
     @staticmethod
     def _city_traffic_data(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City) -> xr.DataArray:
@@ -44,10 +44,10 @@ class DataIO:
 
         data = np.stack(data_vals, axis=-1)
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
-                  'time': DataIO.get_times(),
-                  'service': DataIO.get_services(),
-                  'day': DataIO.get_days()}
-        dims = [aggregation_level.value, 'time', 'service', 'day']
+                  TrafficDataDimensions.TIME.value: DataIO.get_times(),
+                  TrafficDataDimensions.SERVICE.value: DataIO.get_services(),
+                  TrafficDataDimensions.DAY.value: DataIO.get_days()}
+        dims = [aggregation_level.value, TrafficDataDimensions.TIME.value, TrafficDataDimensions.SERVICE.value, TrafficDataDimensions.DAY.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
         return xar
 
@@ -57,9 +57,9 @@ class DataIO:
         data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for day in days)
         data = np.stack(data_vals, axis=-1)
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
-                  'time': DataIO.get_times(),
-                  'day': DataIO.get_days()}
-        dims = [aggregation_level.value, 'time', 'day']
+                  TrafficDataDimensions.TIME.value: DataIO.get_times(),
+                  TrafficDataDimensions.DAY.value: DataIO.get_days()}
+        dims = [aggregation_level.value, TrafficDataDimensions.TIME.value, TrafficDataDimensions.DAY.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
         return xar
 
@@ -68,9 +68,9 @@ class DataIO:
         data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for service in Service)
         data = np.stack(data_vals, axis=-1)
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
-                  'time': DataIO.get_times(),
-                  'service': DataIO.get_services()}
-        dims = [aggregation_level.value, 'time', 'service']
+                  TrafficDataDimensions.TIME.value: DataIO.get_times(),
+                  TrafficDataDimensions.SERVICE.value: DataIO.get_services()}
+        dims = [aggregation_level.value, TrafficDataDimensions.TIME.value, TrafficDataDimensions.SERVICE.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
         return xar
 
@@ -78,8 +78,8 @@ class DataIO:
     def _city_service_day_traffic_data(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City, service: Service, day: date) -> xr.DataArray:
         data = DataIO._load_traffic_data_base(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day)
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
-                  'time': DataIO.get_times()}
-        dims = [aggregation_level.value, 'time']
+                  TrafficDataDimensions.TIME.value: DataIO.get_times()}
+        dims = [aggregation_level.value, TrafficDataDimensions.TIME.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
         return xar
 
@@ -122,6 +122,12 @@ class DataIO:
 
     @staticmethod
     def get_location_ids(aggregation_level: AggregationLevel, city: City):
-        data = DataIO._load_traffic_data_file(traffic_type=TrafficType.DL, aggregation_level=aggregation_level,
-                                              city=city, service=Service.YOUTUBE, day=date(2019, 3, 16))
-        return data.index
+        location_code_file = f'{GEO_DATA_PATH}/IrisTileMatching.csv'
+        location_codes = pd.read_csv(location_code_file, sep=',', dtype={AggregationLevel.IRIS.value: str, AggregationLevel.TILE.value: str})
+        location_codes = location_codes[location_codes['city'] == city.value]
+        location_codes = list(np.sort(location_codes[aggregation_level.value].unique()))
+        return location_codes
+
+
+if __name__ == '__main__':
+    d = DataIO.get_location_ids(aggregation_level=AggregationLevel.IRIS, city=City.LYON)

@@ -4,6 +4,8 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 
+from Utils import TrafficDataDimensions
+
 
 class Smoother:
     def __init__(self):
@@ -43,7 +45,7 @@ class Preprocessor:
         return traffic_time_series
 
     def total_traffic(self) -> xr.DataArray:
-        return self.xar_city.sum(dim='service')
+        return self.xar_city.sum(dim=TrafficDataDimensions.SERVICE.value)
 
     @staticmethod
     def index_to_datetime(traffic_time_series: pd.DataFrame) -> pd.DataFrame:
@@ -53,5 +55,5 @@ class Preprocessor:
 
     @staticmethod
     def to_time_series_format(total_traffic: xr.DataArray) -> pd.DataFrame:
-        time_series = total_traffic.stack(datetime=['day', 'time']).T.to_pandas()
+        time_series = total_traffic.stack(datetime=[TrafficDataDimensions.DAY.value, TrafficDataDimensions.TIME.value]).T.to_pandas()
         return time_series

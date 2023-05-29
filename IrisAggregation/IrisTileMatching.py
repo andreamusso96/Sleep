@@ -5,7 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 
-from Utils import City
+from Utils import City, AggregationLevel
 from IrisAggregation.GeoData import TileGeoData, IrisGeoData
 from config import GEO_DATA_PATH
 
@@ -30,7 +30,7 @@ class Matcher:
     def _get_matching_city(tile_geo_data_city: gpd.GeoDataFrame, iris_geo_data: gpd.GeoDataFrame, city_name: str) -> pd.DataFrame:
         tile_iris_intersections = Matcher._get_tile_iris_intersections_with_intersection_area(tile_geo_data_city=tile_geo_data_city, iris_geo_data=iris_geo_data)
         matching_for_tiles_intersecting_iris = Matcher._get_matching_for_tiles_intersecting_iris(tile_iris_intersections=tile_iris_intersections)
-        tiles_not_intersecting_any_iris = tile_iris_intersections.loc[tile_iris_intersections['index_right'].isna()][['tile_id', 'geometry']]
+        tiles_not_intersecting_any_iris = tile_iris_intersections.loc[tile_iris_intersections['index_right'].isna()][[AggregationLevel.TILE.value, 'geometry']]
 
         if len(tiles_not_intersecting_any_iris) > 0:
             matching_for_tiles_not_intersecting_iris = Matcher._get_matching_for_tiles_not_intersecting_any_iris(tiles_not_intersecting_any_iris=tiles_not_intersecting_any_iris, iris_geo_data=iris_geo_data)
@@ -38,20 +38,19 @@ class Matcher:
         else:
             matching = matching_for_tiles_intersecting_iris
 
-        matching.rename(columns={'CODE_IRIS': 'iris_id'}, inplace=True)
         matching['city'] = city_name
         return matching
 
     @staticmethod
     def _get_matching_for_tiles_not_intersecting_any_iris(tiles_not_intersecting_any_iris: gpd.GeoDataFrame, iris_geo_data: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         tile_iris_nearest = tiles_not_intersecting_any_iris.sjoin_nearest(right=iris_geo_data, how='left', distance_col='distance')
-        matching_for_tiles_not_intersecting_iris = tile_iris_nearest.loc[tile_iris_nearest.groupby('tile_id')['distance'].idxmin()][['tile_id', 'CODE_IRIS']]
+        matching_for_tiles_not_intersecting_iris = tile_iris_nearest.loc[tile_iris_nearest.groupby(AggregationLevel.TILE.value)['distance'].idxmin()][[AggregationLevel.TILE.value, AggregationLevel.IRIS.value]]
         return matching_for_tiles_not_intersecting_iris
 
     @staticmethod
     def _get_matching_for_tiles_intersecting_iris(tile_iris_intersections: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        tile_iris_intersections_no_nas = tile_iris_intersections.dropna(subset=['CODE_IRIS'])
-        matching = tile_iris_intersections_no_nas.loc[tile_iris_intersections_no_nas.groupby('tile_id')['intersection_area'].idxmax()][['tile_id', 'CODE_IRIS']]
+        tile_iris_intersections_no_nas = tile_iris_intersections.dropna(subset=[AggregationLevel.IRIS.value])
+        matching = tile_iris_intersections_no_nas.loc[tile_iris_intersections_no_nas.groupby(AggregationLevel.TILE.value)['intersection_area'].idxmax()][[AggregationLevel.TILE.value, AggregationLevel.IRIS.value]]
         return matching
 
     @staticmethod
@@ -75,7 +74,7 @@ class IrisTileMatching:
         self.mapping = self._build_mapping_from_matching_data()
 
     def _load(self) -> pd.DataFrame:
-        data = pd.read_csv(filepath_or_buffer=self.file_name, sep=',')
+        data = pd.read_csv(filepath_or_buffer=self.file_name, sep=',', dtype={AggregationLevel.TILE.value: int, AggregationLevel.IRIS.value: str})
         return data
 
     def get_iris_code(self, city: City, tile_id: int) -> int:
@@ -85,15 +84,8 @@ class IrisTileMatching:
         mapping = {}
         for city in City:
             city_matching_data = self.data[self.data['city'] == city.value]
-            mapping[city.value] = {int(tile_id): self.iris_id_to_int(iris_id) for tile_id, iris_id in zip(city_matching_data['tile_id'], city_matching_data['iris_id'])}
+            mapping[city.value] = {tile_id: iris_id for tile_id, iris_id in zip(city_matching_data[AggregationLevel.TILE.value], city_matching_data[AggregationLevel.TILE.value])}
         return mapping
-
-    @staticmethod
-    def iris_id_to_int(iris_id) -> int:
-        if np.isnan(iris_id):
-            return np.nan
-        else:
-            return int(iris_id)
 
 
 class IrisTileMatchingAPI:
@@ -111,4 +103,8 @@ class IrisTileMatchingAPI:
     def load_matching() -> IrisTileMatching:
         iris_tile_matching = IrisTileMatching(file_name=IrisTileMatchingAPI.matching_file_name)
         return iris_tile_matching
+
+
+if __name__ == '__main__':
+    IrisTileMatchingAPI.generate_matching_file()
 
