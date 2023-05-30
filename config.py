@@ -12,4 +12,4 @@ else:
 GEO_DATA_PATH = f'{DATA_PATH}/GeoData'
 TRAFFIC_DATA_PATH = f'{DATA_PATH}/TrafficData'
 TEMP_DATA_PATH = f'{DATA_PATH}/TempData'
-ADMIN_DATA_PATH = f'{DATA_PATH}/AdministrativeData'
+ADMIN_DATA_PATH = f'{DATA_PATH}/AdminData'

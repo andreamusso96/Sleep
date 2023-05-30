@@ -72,7 +72,8 @@ def rename_iris_to_str():
             raise ValueError(f'Invalid iris code: {iris_int}')
 
     specs = list(itertools.product(Service, TrafficType, DataIO.get_days()))
-    for city in tqdm(City):
+    cities = [city for city in City][8:]
+    for city in tqdm(cities):
         location_ids = DataIO.get_location_ids(aggregation_level=AggregationLevel.IRIS, city=city)
         for service, traffic_type, day in specs:
             data = DataIO._load_traffic_data_base(city=city, service=service, traffic_type=traffic_type, day=day, aggregation_level=AggregationLevel.IRIS)
@@ -83,7 +84,6 @@ def rename_iris_to_str():
 
             data_new.index = [iris_int_to_str(iris_int=iris_int) for iris_int in data_new.index]
             DataIO.save_iris_aggregated_traffic_data(data=data_new, traffic_type=traffic_type, city=city, service=service, day=day)
-
 
 
 if __name__ == '__main__':
