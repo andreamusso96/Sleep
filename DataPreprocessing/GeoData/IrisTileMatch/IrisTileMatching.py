@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 
 from Utils import City, AggregationLevel
-from IrisAggregation.GeoData import TileGeoData, IrisGeoData
+from DataPreprocessing.GeoData.GeoData import TileGeoData, IrisGeoData
 from config import GEO_DATA_PATH
 
 

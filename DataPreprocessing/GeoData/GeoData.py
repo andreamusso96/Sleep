@@ -1,4 +1,6 @@
 import geopandas as gpd
+import pandas as pd
+from unidecode import unidecode
 
 from Utils import City, AggregationLevel
 from config import GEO_DATA_PATH
@@ -34,10 +36,31 @@ class IrisGeoData(GeoData):
     def load(self):
         data = gpd.read_file(filename=self.file_name, dtypes={'CODE_IRIS': str})
         data.to_crs(crs='WGS 84', inplace=True)
-        data = data[['CODE_IRIS', 'geometry']]
+        data = data[['CODE_IRIS', 'geometry']].copy()
         data.rename(columns={'CODE_IRIS': AggregationLevel.IRIS.value}, inplace=True)
         return data
 
 
+class CityLatLongGeoData(GeoData):
+    def __init__(self):
+        super().__init__(f'{GEO_DATA_PATH}/city_lat_long.csv')
+
+    def load(self):
+        data = pd.read_csv(self.file_name, sep=',', header=0)
+        gdf = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(x=data['lng'], y=data['lat']))
+        gdf = gdf[['city', 'geometry']]
+        gdf['city'] = gdf['city'].apply(lambda city_name: CityLatLongGeoData._normalize_city_names(name=city_name))
+        gdf.set_crs(crs='WGS 84', inplace=True)
+        return gdf
+
+    @staticmethod
+    def _normalize_city_names(name: str):
+        normalized_name = unidecode(name)
+        if normalized_name.startswith('Le '):
+            normalized_name = normalized_name.split(' ')[1]
+        return normalized_name
+
+
 if __name__ == '__main__':
-    iris = IrisGeoData()
+    c = CityLatLongGeoData()
+    c.load()

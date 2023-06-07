@@ -13,9 +13,10 @@ class DetectionResultPlot:
         self.daily_component_traffic_time_series_data = detection_result.daily_component_traffic_time_series_data
         self.sleep_change_points = detection_result.sleep_change_points
         self.sleep_scores = detection_result.sleep_scores
+        self.location_ids = [c for c in self.sleep_change_points.columns if not c.startswith('unc_')]
 
     def plot(self):
-        figures = [self._make_plot_location(location_id=location_id) for location_id in self.sleep_change_points.columns]
+        figures = [self._make_plot_location(location_id=location_id) for location_id in self.location_ids]
         return figures
 
     def _make_plot_location(self, location_id):
@@ -25,7 +26,16 @@ class DetectionResultPlot:
         fig.add_trace(self._get_trace_sleep_scores(location_id=location_id))
         fig.add_trace(self._get_trace_sleep_change_points_location(location_id=location_id, sleep_state='asleep'))
         fig.add_trace(self._get_trace_sleep_change_points_location(location_id=location_id, sleep_state='awake'))
-        fig.update_layout(title_text=f'Sleep patterns for {location_id}', xaxis_rangeslider_visible=True, height=700)
+        fig = DetectionResultPlot._set_layout(fig=fig, location_id=location_id)
+        return fig
+
+    @staticmethod
+    def _set_layout(fig, location_id):
+        font = dict(size=18)
+        fig.update_xaxes(title_text='Time')
+        fig.update_yaxes(title_text='Traffic')
+        fig.update_layout(title_text=f'Sleep patterns for location {location_id}', xaxis_rangeslider_visible=True,
+                          height=700, font=font)
         return fig
 
     def _get_trace_traffic_location(self, location_id):
@@ -46,7 +56,8 @@ class DetectionResultPlot:
     def _get_trace_sleep_change_points_location(self, location_id, sleep_state):
         sleep_change_points_x = self.sleep_change_points[location_id].xs(sleep_state, level="sleep_state").values
         sleep_change_points_y = 0.4 * np.ones(len(sleep_change_points_x))
-        trace_sleep_change_points_location = go.Scatter(x=sleep_change_points_x, y=sleep_change_points_y, name=f'{sleep_state}', mode='markers', marker=dict(color='Yellow', symbol='line-ns', size=250, line=dict(width=1, color='Yellow')))
+        sleep_change_points_uncertainty = 1 + 3*self.sleep_change_points[f'unc_{location_id}'].xs(sleep_state, level="sleep_state").values
+        trace_sleep_change_points_location = go.Scatter(x=sleep_change_points_x, y=sleep_change_points_y, name=f'{sleep_state}', mode='markers', marker=dict(color='Yellow', symbol='line-ns', size=250, line=dict(width=sleep_change_points_uncertainty)))
         return trace_sleep_change_points_location
 
     @staticmethod
@@ -56,7 +67,7 @@ class DetectionResultPlot:
 
 class HistogramsSleepPatterns:
     def __init__(self, sleep_change_points: pd.DataFrame):
-        self.sleep_change_points = sleep_change_points
+        self.sleep_change_points = sleep_change_points[[c for c in sleep_change_points.columns if c.startswith('unc_')]]
         self.sleep_change_points_time = self._get_sleep_change_points_time()
         self.fig = make_subplots(rows=2, cols=1, subplot_titles=("Awake", "Asleep"))
 

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from AdminDataProcessing.Data import Population, Equipements
+from DataPreprocessing.AdminData.Data import Population, Equipements
 
 
 class BusinessDensityIndex:

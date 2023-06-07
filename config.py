@@ -7,9 +7,10 @@ if 'cluster' in os.path.abspath(__file__):
 if is_cluster:
     DATA_PATH = '/cluster/work/gess/coss/users/anmusso/NetMob'
 else:
-    DATA_PATH = '/Users/anmusso/Desktop/PhD/NetMob/data'
+    DATA_PATH = '/Users/anmusso/Desktop/PhD/NetMob/NetMobData/data'
 
 GEO_DATA_PATH = f'{DATA_PATH}/GeoData'
 TRAFFIC_DATA_PATH = f'{DATA_PATH}/TrafficData'
 TEMP_DATA_PATH = f'{DATA_PATH}/TempData'
 ADMIN_DATA_PATH = f'{DATA_PATH}/AdminData'
+WEATHER_DATA_PATH = f'{DATA_PATH}/WeatherData'

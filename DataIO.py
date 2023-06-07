@@ -13,15 +13,17 @@ from Utils import TrafficType, City, Service, AggregationLevel, TrafficDataDimen
 
 class DataIO:
     @staticmethod
-    def load_traffic_data(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City, service: Service=None, day: date=None) -> xr.DataArray:
-        if service is None and day is None:
+    def load_traffic_data(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City = None, service: Service=None, day: date=None) -> xr.DataArray:
+        if service is None and day is None and city is not None:
             return DataIO._city_traffic_data(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city)
-        elif service is None and day is not None:
+        elif service is None and day is not None and city is not None:
             return DataIO._city_day_traffic_data(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, day=day)
-        elif service is not None and day is None:
+        elif service is not None and day is None and city is not None:
             return DataIO._city_service_traffic_data(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service)
-        elif service is not None and day is not None:
+        elif service is not None and day is not None and city is not None:
             return DataIO._city_service_day_traffic_data(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day)
+        elif service is not None and day is None and city is None:
+            return DataIO._service_traffic_data(traffic_type=traffic_type, aggregation_level=aggregation_level, service=service)
         else:
             raise ValueError(f'Invalid parameters for DataIO.load_traffic_data: traffic_type={traffic_type}, aggregation_level={aggregation_level}, city={city}, service={service}, day={day}')
 
@@ -80,6 +82,23 @@ class DataIO:
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
                   TrafficDataDimensions.TIME.value: DataIO.get_times()}
         dims = [aggregation_level.value, TrafficDataDimensions.TIME.value]
+        xar = xr.DataArray(data, coords=coords, dims=dims)
+        return xar
+
+    @staticmethod
+    def _service_traffic_data(traffic_type: TrafficType, aggregation_level: AggregationLevel, service: Service) -> xr.DataArray:
+        data_vals = []
+        location_ids = []
+        for city in tqdm(City):
+            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for day in DataIO.get_days())
+            data_vals.append(np.stack(data_vals_day, axis=-1))
+            location_ids += DataIO.get_location_ids(aggregation_level=aggregation_level, city=city)
+
+        data = np.concatenate(data_vals, axis=0)
+        coords = {aggregation_level.value: location_ids,
+                  TrafficDataDimensions.TIME.value: DataIO.get_times(),
+                  TrafficDataDimensions.DAY.value: DataIO.get_days()}
+        dims = [aggregation_level.value, TrafficDataDimensions.TIME.value, TrafficDataDimensions.DAY.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
         return xar
 

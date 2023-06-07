@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from AdminDataProcessing.Data import Activite, CouplesFamilleMenage, Diplomes, Equipements, Logement, Population, Revenus, AdminData, AdminComplete
+from DataPreprocessing.AdminData.Data import Activite, CouplesFamilleMenage, Diplomes, Equipements, Logement, Population, Revenus, AdminData, AdminComplete
 
 
 class Merger:

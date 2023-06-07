@@ -10,17 +10,17 @@ class City(Enum):
     GRENOBLE = 'Grenoble'
     LILLE = 'Lille'
     LYON = 'Lyon'
-    MANS = 'Mans'
+    MANS = 'Mans' #
     MARSEILLE = 'Marseille'
     METZ = 'Metz'
     MONTPELLIER = 'Montpellier'
     NANCY = 'Nancy'
     NANTES = 'Nantes'
     NICE = 'Nice'
-    ORLEANS = 'Orleans'
+    ORLEANS = 'Orleans' #
     PARIS = 'Paris'
     RENNES = 'Rennes'
-    SAINT_ETIENNE = 'Saint-Etienne'
+    SAINT_ETIENNE = 'Saint-Etienne' #
     STRASBOURG = 'Strasbourg'
     TOULOUSE = 'Toulouse'
     TOURS = 'Tours'
@@ -164,4 +164,10 @@ class Anomalies:
                              date(2019, 5, 23), date(2019, 5, 24), date(2019, 5, 25)]
         else:
             anomaly_dates = [date(2019, 4, 14), date(2019, 5, 12)]
+        return anomaly_dates
+
+    @staticmethod
+    def get_all_anomaly_dates():
+        anomaly_dates = [date(2019, 4, 9), date(2019, 4, 12), date(2019, 4, 14), date(2019, 5, 12),
+                         date(2019, 5, 22), date(2019, 5, 23), date(2019, 5, 24), date(2019, 5, 25)]
         return anomaly_dates
