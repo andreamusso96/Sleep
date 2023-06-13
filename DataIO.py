@@ -41,13 +41,13 @@ class DataIO:
         data_vals = []
         days = DataIO.get_days()
         for day in tqdm(days):
-            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for service in Service)
+            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for service in Service.get_services(traffic_type=traffic_type))
             data_vals.append(np.stack(data_vals_day, axis=-1))
 
         data = np.stack(data_vals, axis=-1)
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
                   TrafficDataDimensions.TIME.value: DataIO.get_times(),
-                  TrafficDataDimensions.SERVICE.value: DataIO.get_services(),
+                  TrafficDataDimensions.SERVICE.value: Service.get_services(traffic_type=traffic_type, return_values=True),
                   TrafficDataDimensions.DAY.value: DataIO.get_days()}
         dims = [aggregation_level.value, TrafficDataDimensions.TIME.value, TrafficDataDimensions.SERVICE.value, TrafficDataDimensions.DAY.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
@@ -67,11 +67,11 @@ class DataIO:
 
     @staticmethod
     def _city_day_traffic_data(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City, day: date) -> xr.DataArray:
-        data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for service in Service)
+        data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day) for service in Service.get_services(traffic_type=traffic_type))
         data = np.stack(data_vals, axis=-1)
         coords = {aggregation_level.value: DataIO.get_location_ids(aggregation_level=aggregation_level, city=city),
                   TrafficDataDimensions.TIME.value: DataIO.get_times(),
-                  TrafficDataDimensions.SERVICE.value: DataIO.get_services()}
+                  TrafficDataDimensions.SERVICE.value: Service.get_services(traffic_type=traffic_type)}
         dims = [aggregation_level.value, TrafficDataDimensions.TIME.value, TrafficDataDimensions.SERVICE.value]
         xar = xr.DataArray(data, coords=coords, dims=dims)
         return xar
@@ -104,10 +104,16 @@ class DataIO:
 
     @staticmethod
     def _load_traffic_data_base(traffic_type: TrafficType, aggregation_level: AggregationLevel, city: City, service: Service, day: date) -> pd.DataFrame:
-        if traffic_type == TrafficType.B:
+        if traffic_type == TrafficType.UL_AND_DL or traffic_type == TrafficType.USERS:
             ul_data = DataIO._load_traffic_data_file(traffic_type=TrafficType.UL, aggregation_level=aggregation_level, city=city, service=service, day=day)
             dl_data = DataIO._load_traffic_data_file(traffic_type=TrafficType.DL, aggregation_level=aggregation_level, city=city, service=service, day=day)
-            return ul_data + dl_data
+            traffic = ul_data + dl_data
+            if traffic_type == TrafficType.USERS:
+                service_data_consumption = Service.get_service_data_consumption(service=service)
+                traffic = traffic / service_data_consumption
+                return traffic
+            else:
+                return traffic
         else:
             return DataIO._load_traffic_data_file(traffic_type=traffic_type, aggregation_level=aggregation_level, city=city, service=service, day=day)
 
@@ -136,10 +142,6 @@ class DataIO:
         return pd.date_range(start='2019-03-16', end='2019-05-31', freq='D')
 
     @staticmethod
-    def get_services():
-        return [service.value for service in Service]
-
-    @staticmethod
     def get_location_ids(aggregation_level: AggregationLevel, city: City):
         location_code_file = f'{GEO_DATA_PATH}/IrisTileMatching.csv'
         location_codes = pd.read_csv(location_code_file, sep=',', dtype={AggregationLevel.IRIS.value: str, AggregationLevel.TILE.value: str})
@@ -149,4 +151,4 @@ class DataIO:
 
 
 if __name__ == '__main__':
-    d = DataIO.get_location_ids(aggregation_level=AggregationLevel.IRIS, city=City.LYON)
+    d = DataIO.load_traffic_data(traffic_type=TrafficType.USERS, aggregation_level=AggregationLevel.IRIS, city=City.LYON)

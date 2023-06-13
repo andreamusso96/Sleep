@@ -59,7 +59,7 @@ class ServiceTrafficEstimator:
 
 
 def plot_figure_15min_traffic_data(service):
-    service_traffic_data = DataIO.load_traffic_data(traffic_type=TrafficType.B, aggregation_level=AggregationLevel.IRIS,
+    service_traffic_data = DataIO.load_traffic_data(traffic_type=TrafficType.UL_AND_DL, aggregation_level=AggregationLevel.IRIS,
                                                     service=service)
     service_traffic_estimator = ServiceTrafficEstimator(service_traffic_data=service_traffic_data, service=service)
     traffic_person_in_15min, average_traffic_15min, traffic_samples_with_few_users = service_traffic_estimator.estimate_traffic_person_in_15min()

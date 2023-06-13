@@ -1,6 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import List
 from enum import Enum
+
+import xarray as xr
+import pandas as pd
+import numpy as np
 
 
 class City(Enum):
@@ -10,17 +14,17 @@ class City(Enum):
     GRENOBLE = 'Grenoble'
     LILLE = 'Lille'
     LYON = 'Lyon'
-    MANS = 'Mans' #
+    MANS = 'Mans'  #
     MARSEILLE = 'Marseille'
     METZ = 'Metz'
     MONTPELLIER = 'Montpellier'
     NANCY = 'Nancy'
     NANTES = 'Nantes'
     NICE = 'Nice'
-    ORLEANS = 'Orleans' #
+    ORLEANS = 'Orleans'  #
     PARIS = 'Paris'
     RENNES = 'Rennes'
-    SAINT_ETIENNE = 'Saint-Etienne' #
+    SAINT_ETIENNE = 'Saint-Etienne'  #
     STRASBOURG = 'Strasbourg'
     TOULOUSE = 'Toulouse'
     TOURS = 'Tours'
@@ -56,6 +60,13 @@ class CityDimensions:
     def get_city_dim(cls, city):
         city_name = city.value  # Get the city name from the Enum member
         return cls.city_dims.get(city_name)
+
+
+class TrafficType(Enum):
+    DL = 'DL'
+    UL = 'UL'
+    UL_AND_DL = 'UL_AND_DL'
+    USERS = 'Users'
 
 
 class Service(Enum):
@@ -128,11 +139,100 @@ class Service(Enum):
     WEB_STREAMING = 'Web_Streaming'
     YAHOO = 'Yahoo'
 
+    @staticmethod
+    def get_services(traffic_type: TrafficType, return_values=False):
+        if traffic_type == TrafficType.USERS:
+            if return_values:
+                return [service.value for service in Service if Service.is_entertainment_service(service)]
+            else:
+                return [service for service in Service if Service.is_entertainment_service(service)]
+        else:
+            if return_values:
+                return [service.value for service in Service]
+            else:
+                return [service for service in Service]
 
-class TrafficType(Enum):
-    DL = 'DL'
-    UL = 'UL'
-    B = 'B'
+    @staticmethod
+    def is_entertainment_service(service):
+        _entertainment_services = {
+            Service.TWITCH,
+            Service.ORANGE_TV,
+            Service.WEB_GAMES,
+            Service.WEB_WEATHER,
+            Service.TWITTER,
+            Service.APPLE_MUSIC,
+            Service.WEB_ADS,
+            Service.SOUNDCLOUD,
+            Service.WIKIPEDIA,
+            Service.WEB_FOOD,
+            Service.YOUTUBE,
+            Service.PINTEREST,
+            Service.WEB_CLOTHES,
+            Service.WEB_ADULT,
+            Service.DAILYMOTION,
+            Service.INSTAGRAM,
+            Service.CLASH_OF_CLANS,
+            Service.POKEMON_GO,
+            Service.WEB_FINANCE,
+            Service.FACEBOOK_LIVE,
+            Service.EA_GAMES,
+            Service.APPLE_VIDEO,
+            Service.LINKEDIN,
+            Service.SNAPCHAT,
+            Service.DEEZER,
+            Service.NETFLIX,
+            Service.FACEBOOK,
+            Service.MOLOTOV,
+            Service.WEB_E_COMMERCE,
+            Service.FORTNITE,
+            Service.PERISCOPE,
+            Service.SPOTIFY,
+            Service.WEB_STREAMING,
+            Service.YAHOO
+        }
+        return service in _entertainment_services
+
+    @staticmethod
+    def get_service_data_consumption(service, timespan: timedelta = timedelta(minutes=15)):
+        if Service.is_entertainment_service(service):
+            hourly_data_consumption = {
+                Service.TWITCH: 800,
+                Service.ORANGE_TV: 900,
+                Service.WEB_GAMES: 100,
+                Service.WEB_WEATHER: 5,
+                Service.TWITTER: 100,
+                Service.APPLE_MUSIC: 150,
+                Service.WEB_ADS: 30,
+                Service.SOUNDCLOUD: 150,
+                Service.WIKIPEDIA: 15,
+                Service.WEB_FOOD: 50,
+                Service.YOUTUBE: 800,
+                Service.PINTEREST: 200,
+                Service.WEB_CLOTHES: 60,
+                Service.WEB_ADULT: 800,
+                Service.DAILYMOTION: 800,
+                Service.INSTAGRAM: 200,
+                Service.CLASH_OF_CLANS: 100,
+                Service.POKEMON_GO: 60,
+                Service.WEB_FINANCE: 50,
+                Service.FACEBOOK_LIVE: 800,
+                Service.EA_GAMES: 100,
+                Service.APPLE_VIDEO: 900,
+                Service.LINKEDIN: 100,
+                Service.SNAPCHAT: 200,
+                Service.DEEZER: 150,
+                Service.NETFLIX: 900,
+                Service.FACEBOOK: 200,
+                Service.MOLOTOV: 900,
+                Service.WEB_E_COMMERCE: 60,
+                Service.FORTNITE: 100,
+                Service.PERISCOPE: 800,
+                Service.SPOTIFY: 150,
+                Service.WEB_STREAMING: 800,
+                Service.YAHOO: 100
+            }
+            data_consumption_service_in_timespan = hourly_data_consumption[service] * (timespan/timedelta(hours=1))
+            return data_consumption_service_in_timespan
 
 
 class AggregationLevel(Enum):
@@ -171,3 +271,16 @@ class Anomalies:
         anomaly_dates = [date(2019, 4, 9), date(2019, 4, 12), date(2019, 4, 14), date(2019, 5, 12),
                          date(2019, 5, 22), date(2019, 5, 23), date(2019, 5, 24), date(2019, 5, 25)]
         return anomaly_dates
+
+
+class Indexing:
+    @staticmethod
+    def day_time_to_datetime_index(xar: xr.DataArray) -> xr.DataArray:
+        new_index = np.add.outer(xar.indexes[TrafficDataDimensions.DAY.value], xar.indexes[TrafficDataDimensions.TIME.value]).flatten()
+        datetime_xar = xar.stack(datetime=[TrafficDataDimensions.DAY.value, TrafficDataDimensions.TIME.value], create_index=False)
+        datetime_xar = datetime_xar.reindex({'datetime': new_index})
+        return datetime_xar
+
+
+if __name__ == '__main__':
+    Service.get_service_data_consumption(Service.YOUTUBE)

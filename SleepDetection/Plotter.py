@@ -3,8 +3,10 @@ from plotly.subplots import make_subplots
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
+import xarray as xr
 
 from SleepDetection.Detector import DetectionResult
+from Utils import TrafficDataDimensions, Service, TrafficType, AggregationLevel, Indexing
 
 
 class DetectionResultPlot:
@@ -107,3 +109,99 @@ class HistogramsSleepPatterns:
         counts_change_point_occurrence_by_time_all_bins[location_id] = counts_change_point_occurrence_by_time
         counts_change_point_occurrence_by_time_all_bins.fillna(0, inplace=True)
         return counts_change_point_occurrence_by_time_all_bins
+
+
+class UsersVsTraffic:
+    def __init__(self, xar_city_users: xr.DataArray, xar_city_traffic: xr.DataArray):
+        self.xar_city_users = xar_city_users
+        self.xar_city_traffic = xar_city_traffic
+        self.fig = go.Figure()
+
+    def plot(self):
+        xar_traffic_ul_dl = self.xar_city_traffic.sel(service=Service.get_services(traffic_type=TrafficType.USERS, return_values=True)).sum(dim=TrafficDataDimensions.SERVICE.value).sum(dim=AggregationLevel.IRIS.value)
+        xar_traffic_users = self.xar_city_users.sum(dim=TrafficDataDimensions.SERVICE.value).sum(dim=AggregationLevel.IRIS.value)
+        self.plot_location(xar=xar_traffic_ul_dl, name=TrafficType.UL_AND_DL.value)
+        self.plot_location(xar=xar_traffic_users, name=TrafficType.USERS.value)
+        self.fig.update_layout(title_text="Users vs Traffic")
+        self._layout()
+        self.fig.show(renderer="browser")
+
+    def plot_location(self, xar: xr.DataArray, name: str):
+        service_time_series = Indexing.day_time_to_datetime_index(xar=xar).T.to_pandas()
+        rescaled_service_time_series = MinMaxScaler().fit_transform(service_time_series.values.reshape(-1, 1)).flatten()
+        trace_service = go.Scatter(x=service_time_series.index, y=rescaled_service_time_series, mode='lines', name=f'{name}')
+        self.fig.add_trace(trace_service)
+
+    def _layout(self):
+        self.fig.update_layout(title_text="Users vs Traffic", xaxis_rangeslider_visible=True, font=dict(size=18))
+        self.fig.update_xaxes(title_text="Time")
+        self.fig.update_yaxes(title_text="Number of users / Traffic")
+
+
+class SeasonPlot:
+    def __init__(self, xar_city, n_days_season):
+        self.xar_city = xar_city
+        self.users = self.xar_city.sel(service=Service.get_services(traffic_type=TrafficType.USERS, return_values=True)).sum(dim=TrafficDataDimensions.SERVICE.value).sum(dim=AggregationLevel.IRIS.value)
+        self.n_days_season = n_days_season
+        self.n_days_total = self.users.sizes[TrafficDataDimensions.DAY.value]
+        self.fig = go.Figure()
+
+    def plot(self):
+        seasons = self._split_data_into_seasons()
+        for season_id in seasons.columns:
+            self._scatter_plot(x=seasons.index, y=seasons[season_id].values.flatten(), name=season_id, opacity=0.2)
+
+        self._scatter_plot(x=seasons.index, y=seasons.mean(axis=1).values.flatten(), name="mean", opacity=1)
+        self.fig.update_layout(title_text=f"Season length {self.n_days_season} days")
+        self.fig.show(renderer="browser")
+
+    def _scatter_plot(self, x, y, name, opacity):
+        trace = go.Scatter(x=x, y=y, mode='lines', line=dict(color=f'rgba(255, 0, 0, {opacity})'))
+        self.fig.add_trace(trace)
+
+    def _split_data_into_seasons(self):
+        seasons = [self.users.isel(day=list(range(i*self.n_days_season, (i+1)*self.n_days_season))) for i in range(self.n_days_total//self.n_days_season)]
+        seasons = self._reformat_seasons(seasons)
+        return seasons
+
+    @staticmethod
+    def _reformat_seasons(seasons):
+        flat_seasons = [season.stack(datetime=[TrafficDataDimensions.DAY.value, TrafficDataDimensions.TIME.value]).T.to_pandas() for season in seasons]
+        time_index = flat_seasons[0].index.get_level_values(0) + flat_seasons[0].index.get_level_values(1)
+        scaled_seasons = [MinMaxScaler().fit_transform(season.values.reshape(-1, 1)).flatten() for season in
+                          flat_seasons]
+        season_array = np.stack(scaled_seasons, axis=0).T
+        season_df = pd.DataFrame(season_array, index=time_index, columns=list(range(len(seasons))))
+        return season_df
+
+
+class UsersAndWeather:
+    def __init__(self, xar_city: xr.DataArray, city_weather_df: pd.DataFrame):
+        self.xar_city = xar_city
+        self.city_weather_df = city_weather_df
+        self.fig = go.Figure()
+
+    def plot(self):
+        xar_city_aggregated_services = self.xar_city.sum(dim=TrafficDataDimensions.SERVICE.value).sum(dim=AggregationLevel.IRIS.value)
+        users_time_series = Indexing.day_time_to_datetime_index(xar=xar_city_aggregated_services).T.to_pandas()
+        temperature_time_series = self.city_weather_df['temperature'].to_frame()
+        precipitation_time_series = self.city_weather_df['precipitation_last_3h'].to_frame()
+        self._scatter_plot(time_series=users_time_series, name="Users")
+        self._scatter_plot(time_series=temperature_time_series, name="Temperature")
+        self._scatter_plot(time_series=precipitation_time_series, name="Precipitation")
+        self._layout()
+        self.fig.show(renderer="browser")
+
+    def _scatter_plot(self, time_series: pd.DataFrame, name: str):
+        rescaled_service_time_series = MinMaxScaler().fit_transform(time_series.values.reshape(-1, 1)).flatten()
+        trace_time_series = go.Scatter(x=time_series.index, y=rescaled_service_time_series, mode='lines', name=f'{name}')
+        self.fig.add_trace(trace_time_series)
+
+    def _layout(self):
+        self.fig.update_layout(title_text="Users vs temperature", xaxis_rangeslider_visible=True, font=dict(size=18))
+        self.fig.update_xaxes(title_text="Time")
+        self.fig.update_yaxes(title_text="Rescaled value")
+
+
+if __name__ == '__main__':
+    SeasonPlot(xar_city=0, n_days_season=7).plot()

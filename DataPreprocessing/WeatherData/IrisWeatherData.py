@@ -16,7 +16,6 @@ class IrisDataMatcher:
         self.weather_station.load()
         self.weather_station.load_station_locations()
         self.sunrise_sunset.load()
-        self.iris_geo.load()
         self.city_lat_long.load()
 
     def match_iris_to_sunset_sunrise_data(self):
@@ -55,3 +54,9 @@ class IrisDataMatcher:
         iris_city_match = iris_data_proj.sjoin_nearest(city_locations, how='left', distance_col='distance')
         iris_city_match = iris_city_match.loc[iris_city_match.groupby('iris')['distance'].idxmin()][['iris', 'city']]
         return iris_city_match
+
+
+if __name__ == '__main__':
+    iris_data_matcher = IrisDataMatcher()
+    iris_data_matcher.load()
+    matched_data = iris_data_matcher.match_iris_to_weather_data()

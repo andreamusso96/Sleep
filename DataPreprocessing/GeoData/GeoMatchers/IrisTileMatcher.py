@@ -10,7 +10,7 @@ from DataPreprocessing.GeoData.GeoData import TileGeoData, IrisGeoData
 from config import GEO_DATA_PATH
 
 
-class Matcher:
+class IrisTileMatcher:
     def __init__(self, tile_geo_data: List[TileGeoData], iris_geo_data: IrisGeoData):
         self.tile_geo_data = tile_geo_data
         self.iris_geo_data = iris_geo_data
@@ -28,12 +28,12 @@ class Matcher:
 
     @staticmethod
     def _get_matching_city(tile_geo_data_city: gpd.GeoDataFrame, iris_geo_data: gpd.GeoDataFrame, city_name: str) -> pd.DataFrame:
-        tile_iris_intersections = Matcher._get_tile_iris_intersections_with_intersection_area(tile_geo_data_city=tile_geo_data_city, iris_geo_data=iris_geo_data)
-        matching_for_tiles_intersecting_iris = Matcher._get_matching_for_tiles_intersecting_iris(tile_iris_intersections=tile_iris_intersections)
+        tile_iris_intersections = IrisTileMatcher._get_tile_iris_intersections_with_intersection_area(tile_geo_data_city=tile_geo_data_city, iris_geo_data=iris_geo_data)
+        matching_for_tiles_intersecting_iris = IrisTileMatcher._get_matching_for_tiles_intersecting_iris(tile_iris_intersections=tile_iris_intersections)
         tiles_not_intersecting_any_iris = tile_iris_intersections.loc[tile_iris_intersections['index_right'].isna()][[AggregationLevel.TILE.value, 'geometry']]
 
         if len(tiles_not_intersecting_any_iris) > 0:
-            matching_for_tiles_not_intersecting_iris = Matcher._get_matching_for_tiles_not_intersecting_any_iris(tiles_not_intersecting_any_iris=tiles_not_intersecting_any_iris, iris_geo_data=iris_geo_data)
+            matching_for_tiles_not_intersecting_iris = IrisTileMatcher._get_matching_for_tiles_not_intersecting_any_iris(tiles_not_intersecting_any_iris=tiles_not_intersecting_any_iris, iris_geo_data=iris_geo_data)
             matching = pd.concat([matching_for_tiles_intersecting_iris, matching_for_tiles_not_intersecting_iris], axis=0, ignore_index=True)
         else:
             matching = matching_for_tiles_intersecting_iris

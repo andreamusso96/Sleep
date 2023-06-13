@@ -43,7 +43,7 @@ class IrisGeoData(GeoData):
 
 class CityLatLongGeoData(GeoData):
     def __init__(self):
-        super().__init__(f'{GEO_DATA_PATH}/city_lat_long.csv')
+        super().__init__(f'{GEO_DATA_PATH}/CityGeo/city_lat_long.csv')
 
     def load(self):
         data = pd.read_csv(self.file_name, sep=',', header=0)
@@ -61,6 +61,15 @@ class CityLatLongGeoData(GeoData):
         return normalized_name
 
 
+class WeatherStationGeoData(GeoData):
+    def __init__(self):
+        super().__init__(f'{GEO_DATA_PATH}/WeatherStationGeo/weather_station_locations.json')
+
+    def load(self):
+        data = gpd.read_file(self.file_name)
+        return data
+
+
 if __name__ == '__main__':
-    c = CityLatLongGeoData()
+    c = WeatherStationGeoData()
     c.load()
