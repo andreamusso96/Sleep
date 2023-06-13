@@ -14,19 +14,19 @@ class SunriseSunsetScraper:
         self.cities = cities
         self.months = months
 
-    def scrape(self):
+    def scrape(self) -> pd.DataFrame:
         city_month_combinations = list(itertools.product(self.cities, self.months))
         data = [self.scrape_data_city_month(city=city, month=month) for city, month in city_month_combinations]
         data = pd.concat(data, axis=0, ignore_index=True)
         return data
 
-    def scrape_data_city_month(self, city: City, month: str):
+    def scrape_data_city_month(self, city: City, month: str) -> pd.DataFrame:
         raw_data = self.fetch_raw_data_city_month(city=city, month=month)
         data = self.parse_data_city_month(content=raw_data, city=city)
         return data
 
     @staticmethod
-    def fetch_raw_data_city_month(city: City, month: str):
+    def fetch_raw_data_city_month(city: City, month: str) -> str or None:
         url = f"http://calendriersolaire.com/calendrier?location={city.value}&month={month}&year={2019}"
         response = requests.get(url)
         if response.status_code == 200:
@@ -35,7 +35,7 @@ class SunriseSunsetScraper:
             return None
 
     @staticmethod
-    def parse_data_city_month(content, city: City):
+    def parse_data_city_month(content, city: City) -> pd.DataFrame:
         soup = BeautifulSoup(content, 'html.parser')
         data = []
         for td in soup.find_all("td"):

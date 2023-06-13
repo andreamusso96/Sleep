@@ -39,10 +39,10 @@ class GeoMatching:
         mapping = {iris: city for iris, city in iris_city_matching_data.values}
         return mapping
 
-    def get_iris_code(self, city: City, tile: int) -> int:
+    def get_iris(self, city: City, tile: int) -> int:
         return self.mapping_from_city_tile_to_iris[city.value][tile]
 
-    def get_weather_station_code(self, iris: str):
+    def get_weather_station(self, iris: str):
         return self.mapping_from_iris_to_weather_station[iris]
 
     def get_city(self, iris: str):
