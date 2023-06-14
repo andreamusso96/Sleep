@@ -252,6 +252,12 @@ class Calendar:
         holidays = [date(2019, 4, 19), date(2019, 4, 22), date(2019, 5, 1), date(2019, 5, 8), date(2019, 5, 30)]
         return holidays
 
+    @staticmethod
+    def fridays_and_saturdays() -> List[date]:
+        days = pd.date_range(start='2019-03-16', end='2019-05-31')
+        weekends = [day.date() for day in days if day.dayofweek in [4, 5]]
+        return weekends
+
 
 class Anomalies:
     @staticmethod
@@ -283,4 +289,4 @@ class Indexing:
 
 
 if __name__ == '__main__':
-    Service.get_service_data_consumption(Service.YOUTUBE)
+    Calendar.fridays_and_saturdays()

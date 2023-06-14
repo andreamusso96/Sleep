@@ -7,6 +7,8 @@ import xarray as xr
 
 from SleepDetection.Detector import DetectionResult
 from Utils import TrafficDataDimensions, Service, TrafficType, AggregationLevel, Indexing
+from DataPreprocessing.WeatherData.Data import WeatherData
+from DataPreprocessing.TrafficData.Data import CityTrafficData
 
 
 class DetectionResultPlot:
@@ -175,17 +177,18 @@ class SeasonPlot:
         return season_df
 
 
-class UsersAndWeather:
-    def __init__(self, xar_city: xr.DataArray, city_weather_df: pd.DataFrame):
-        self.xar_city = xar_city
-        self.city_weather_df = city_weather_df
+class UsersVsWeather:
+    def __init__(self, city_traffic_data: CityTrafficData, weather_data: WeatherData):
+        self.city_traffic_data = city_traffic_data
+        self.weather_data = weather_data
         self.fig = go.Figure()
 
     def plot(self):
-        xar_city_aggregated_services = self.xar_city.sum(dim=TrafficDataDimensions.SERVICE.value).sum(dim=AggregationLevel.IRIS.value)
-        users_time_series = Indexing.day_time_to_datetime_index(xar=xar_city_aggregated_services).T.to_pandas()
-        temperature_time_series = self.city_weather_df['temperature'].to_frame()
-        precipitation_time_series = self.city_weather_df['precipitation_last_3h'].to_frame()
+        city_traffic_with_aggregated_services_and_locations = self.city_traffic_data.data.sum(dim=TrafficDataDimensions.SERVICE.value).sum(dim=AggregationLevel.IRIS.value)
+        users_time_series = self.city_traffic_data.day_time_to_datetime_index(xar=city_traffic_with_aggregated_services_and_locations).T.to_pandas()
+        weather_data_city = self.weather_data.get_weather_station_data(city=self.city_traffic_data.city).set_index('datetime')
+        temperature_time_series = weather_data_city['temperature'].to_frame()
+        precipitation_time_series = weather_data_city['precipitation_last_3h'].to_frame()
         self._scatter_plot(time_series=users_time_series, name="Users")
         self._scatter_plot(time_series=temperature_time_series, name="Temperature")
         self._scatter_plot(time_series=precipitation_time_series, name="Precipitation")
@@ -203,5 +206,6 @@ class UsersAndWeather:
         self.fig.update_yaxes(title_text="Rescaled value")
 
 
-if __name__ == '__main__':
-    SeasonPlot(xar_city=0, n_days_season=7).plot()
+class ExpectedBedTimesPlot:
+    def __init__(self):
+        self.fig = go.Figure()

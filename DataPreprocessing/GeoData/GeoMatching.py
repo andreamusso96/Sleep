@@ -14,6 +14,7 @@ class GeoMatching:
         self.mapping_from_city_tile_to_iris = self._mapping_from_city_tile_to_iris()
         self.mapping_from_iris_to_weather_station = self._mapping_from_iris_to_weather_station()
         self.mapping_from_iris_to_city = self._mapping_from_iris_to_city()
+        self.mapping_city_to_weather_station = self._mapping_city_to_weather_station()
 
     def load(self):
         data = pd.read_csv(filepath_or_buffer=self.file_path, sep=',',
@@ -39,11 +40,23 @@ class GeoMatching:
         mapping = {iris: city for iris, city in iris_city_matching_data.values}
         return mapping
 
+    def _mapping_city_to_weather_station(self):
+        city_weather_station_matching_data = self.data.drop_duplicates(subset=['city'])[['city', 'weather_station']]
+        mapping = {city: weather_station for city, weather_station in city_weather_station_matching_data.values}
+        return mapping
+
     def get_iris(self, city: City, tile: int) -> int:
         return self.mapping_from_city_tile_to_iris[city.value][tile]
 
-    def get_weather_station(self, iris: str):
-        return self.mapping_from_iris_to_weather_station[iris]
+    def get_weather_station(self, iris: str = None, city: City = None):
+        if iris is None and city is None:
+            raise ValueError('Either iris or city must be provided')
+        if iris is not None and city is not None:
+            raise ValueError('Either iris or city must be provided')
+        if iris is not None:
+            return self.mapping_from_iris_to_weather_station[iris]
+        if city is not None:
+            return self.mapping_city_to_weather_station[city.value]
 
     def get_city(self, iris: str):
         return self.mapping_from_iris_to_city[iris]
@@ -80,4 +93,5 @@ class GeoMatchingAPI:
 
 
 if __name__ == '__main__':
-    GeoMatchingAPI.load_matching()
+    m = GeoMatchingAPI.load_matching()
+    m = m.get_weather_station(city=City.LYON)

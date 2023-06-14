@@ -5,6 +5,7 @@ import pandas as pd
 
 from config import WEATHER_DATA_PATH
 from DataPreprocessing.GeoData.GeoMatching import GeoMatchingAPI
+from Utils import City
 
 
 class WeatherStationData:
@@ -18,6 +19,7 @@ class WeatherStationData:
         data = pd.concat(data, axis=0, ignore_index=True)
         data.drop(columns=['Unnamed: 59'], inplace=True)
         data['date'] = pd.to_datetime(data['date'], format='%Y%m%d%H%M%S')
+        data.sort_values(by=['date'], inplace=True)
         return data
 
 
@@ -31,6 +33,7 @@ class SunriseSunsetData:
         data['day'] = data['day'].apply(lambda x: date.fromisoformat(x))
         data['sunrise'] = data['sunrise'].apply(lambda x: time.fromisoformat(x))
         data['sunset'] = data['sunset'].apply(lambda x: time.fromisoformat(x))
+        data.sort_values(by=['day'], inplace=True)
         return data
 
 
@@ -40,11 +43,17 @@ class WeatherData:
         self.weather_station_data = WeatherStationData()
         self.geo_matching = GeoMatchingAPI.load_matching()
 
-    def get_weather_station_data(self, iris: str):
-        weather_station_code = self.geo_matching.get_weather_station(iris=iris)
+    def get_weather_station_data(self, iris: str = None, city: City = None):
+        if iris is not None:
+            weather_station_code = self.geo_matching.get_weather_station(iris=iris)
+        elif city is not None:
+            weather_station_code = self.geo_matching.get_weather_station(city=city)
+        else:
+            raise ValueError('Either iris or city must be provided.')
         weather_station_data = self.weather_station_data.data[self.weather_station_data.data['numer_sta'] == weather_station_code]
         weather_station_data = self._reformat_weather_station_data(weather_station_data=weather_station_data)
         return weather_station_data
+
     @staticmethod
     def _reformat_weather_station_data(weather_station_data: pd.DataFrame):
         weather_vars = {'numer_sta': 'station', 'date': 'datetime', 't': 'temperature', 'n': 'cloudiness',
@@ -64,3 +73,4 @@ if __name__ == '__main__':
     weather_data = WeatherData()
     print(weather_data.get_weather_station_data(iris='751010101'))
     print(weather_data.get_sunrise_sunset_data(iris='751010101'))
+    print(weather_data.get_weather_station_data(city=City.PARIS))
