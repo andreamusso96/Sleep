@@ -1,6 +1,12 @@
+import webbrowser
+import os
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import geopandas as gpd
+
+from DataPreprocessing.GeoData.GeoData import IrisGeoData
 
 
 class ExpectedBedTime:
@@ -21,6 +27,21 @@ class ExpectedBedTime:
         fig.add_trace(go.Scatter(x=sorted_expected_bed_times.index, y=reference_point + sorted_expected_bed_times['median_float'], name=f'median {trace_name}', mode='markers'))
         if show_plot:
             fig.show(renderer='browser')
+
+    def geo_plot(self, iris_geo_data: IrisGeoData, n_quantiles: int = None):
+        if n_quantiles is not None:
+            bed_time_data = self.assign_iris_to_quantile(n_quantiles=n_quantiles)
+            column = 'quantile'
+            cmap = 'tab10'
+        else:
+            bed_time_data = self.expected_bed_times
+            column = 'mean_float'
+            cmap = 'plasma'
+
+        bed_times_with_geo_data = gpd.GeoDataFrame(bed_time_data.merge(iris_geo_data.data.set_index('iris'), left_index=True, right_index=True, how='left'))[[column, 'geometry']]
+        html_map = bed_times_with_geo_data.explore(column=column, legend=True, tiles="CartoDB positron", cmap=cmap)
+        html_map.save('temp/expected_bed_time_map.html')
+        webbrowser.open('file://' + os.path.realpath('temp/expected_bed_time_map.html'))
 
     def assign_iris_to_quantile(self, n_quantiles: int) -> pd.DataFrame:
         quantiles = self.expected_bed_times['mean_float'].quantile(np.linspace(0, 1, n_quantiles))

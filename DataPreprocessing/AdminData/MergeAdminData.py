@@ -53,8 +53,4 @@ class Merger:
 
 
 if __name__ == '__main__':
-    admin_complete = AdminComplete()
-    admin_complete.load()
-    print(admin_complete.data.head())
-    admin_complete.load_metadata()
-    print(admin_complete.metadata.head())
+    pass
