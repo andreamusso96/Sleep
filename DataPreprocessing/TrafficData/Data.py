@@ -6,20 +6,23 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 
-from Utils import City, AggregationLevel, TrafficType, TrafficDataDimensions, Calendar, Anomalies
+from Utils import City, TrafficType, TrafficDataDimensions, Calendar, Anomalies
 from DataIO import DataIO
+from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 
 
 class CityTrafficData:
-    def __init__(self, city: City, aggregation_level: AggregationLevel = AggregationLevel.IRIS, traffic_type: TrafficType = TrafficType.USERS):
+    def __init__(self, city: City, geo_data_type: GeoDataType = GeoDataType.IRIS,
+                 traffic_type: TrafficType = TrafficType.USERS):
         self.city = city
-        self.aggregation_level = aggregation_level
+        self.aggregation_level = geo_data_type
         self.traffic_type = traffic_type
         self.data = self.load()
         self.data_datetime_index = None
 
     def load(self):
-        city_traffic_data = DataIO.load_traffic_data(city=self.city, aggregation_level=self.aggregation_level, traffic_type=self.traffic_type)
+        city_traffic_data = DataIO.load_traffic_data(traffic_type=self.traffic_type,
+                                                     geo_data_type=self.aggregation_level, city=self.city)
         return city_traffic_data
 
     def get_traffic_time_series_by_location(self, remove_nights_before_holidays: bool = True, remove_nights_of_anomaly_periods: bool = True) -> pd.DataFrame:

@@ -17,7 +17,7 @@ class BasicFeatureImportanceCalculator:
         self.admin_data = admin_data
 
     def compute_feature_importance(self, n_quantiles: int = 5):
-        features = self._get_features(iris_codes=self.expected_bed_time.expected_bed_times.index)
+        features = self._get_features(iris_codes=self.expected_bed_time.data.index)
         labels = self.expected_bed_time.assign_iris_to_quantile(n_quantiles=n_quantiles).loc[features.index]
         feature_importance = self._estimate_feature_importance(features=features, labels=labels)
         feature_importance = self._add_feature_description(feature_importance=feature_importance)

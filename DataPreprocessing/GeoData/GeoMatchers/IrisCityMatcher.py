@@ -2,6 +2,7 @@ import geopandas as gpd
 import pandas as pd
 
 from DataPreprocessing.GeoData.GeoData import IrisGeoData, CityLatLongGeoData
+from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 from Utils import City
 
 

@@ -9,7 +9,8 @@ class Profiler:
 
     @staticmethod
     def _run_program():
-        xar_city = DataIO.load_traffic_data(traffic_type=TrafficType.UL_AND_DL, city=City.LYON, aggregation_level=AggregationLevel.IRIS)
+        xar_city = DataIO.load_traffic_data(traffic_type=TrafficType.UL_AND_DL, geo_data_type=AggregationLevel.IRIS,
+                                            city=City.LYON)
         detector = Detector(xar_city=xar_city)
         detector.detect_sleep_patterns()
 

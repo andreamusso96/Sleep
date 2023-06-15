@@ -55,7 +55,7 @@ class ExpectedBedTimeCalculator:
         nights = chunker.chunk_series(traffic_time_series=self.traffic_time_series_by_location)
         expected_bed_times_float_format = pd.concat([self._calculate_expected_bed_time_night(traffic_night=night) for night in nights], axis=0)
         expected_bed_time_summary = self._summarise_expected_bed_times(expected_bed_times_float_format=expected_bed_times_float_format)
-        expected_bed_times = ExpectedBedTime(expected_bed_times=expected_bed_time_summary, time_index=self.time_index)
+        expected_bed_times = ExpectedBedTime(data=expected_bed_time_summary, time_index=self.time_index)
         return expected_bed_times
 
     def _summarise_expected_bed_times(self, expected_bed_times_float_format: pd.DataFrame):

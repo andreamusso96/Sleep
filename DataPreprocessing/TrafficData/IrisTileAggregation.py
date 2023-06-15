@@ -4,14 +4,15 @@ from joblib import Parallel, delayed
 
 import pandas as pd
 
-from Utils import City, Service, TrafficType, AggregationLevel
+from Utils import City, Service, TrafficType
 from DataIO import DataIO
-from DataPreprocessing.GeoData.IrisTileMatch.IrisTileMatching import IrisTileMatchingAPI, IrisTileMatching
+from DataPreprocessing.GeoData.GeoMatching import GeoMatchingAPI, GeoMatching
+from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 
 
 class Aggregator:
-    def __init__(self, iris_tile_matching: IrisTileMatching):
-        self.iris_tile_matching = iris_tile_matching
+    def __init__(self, geo_matching: GeoMatching):
+        self.geo_matching = geo_matching
 
     def aggregate_traffic_data(self):
         city_service_day_combinations = list(itertools.product(City, Service, DataIO.get_days()))
@@ -26,28 +27,19 @@ class Aggregator:
                                                  service=service, day=day)
 
     def _aggregate_traffic_data_file(self, traffic_type: TrafficType, city: City, service: Service, day: date) -> pd.DataFrame:
-        data = DataIO.load_traffic_data(city=city, service=service, traffic_type=traffic_type, day=day, aggregation_level=AggregationLevel.TILE).to_pandas()
-        data[AggregationLevel.IRIS.value] = data.apply(lambda row: self.iris_tile_matching.get_iris_code(city=city, tile_id=row.name), axis=1)
-        data = data.groupby(by=AggregationLevel.TILE.value).sum()
+        data = DataIO.load_traffic_data(traffic_type=traffic_type, geo_data_type=GeoDataType.TILE, city=city,
+                                        service=service, day=day).to_pandas()
+        data[GeoDataType.IRIS.value] = data.apply(lambda row: self.geo_matching.get_iris(city=city, tile=row.name), axis=1)
+        data = data.groupby(by=GeoDataType.TILE.value).sum()
         return data
 
 
 class IrisTileAggregationAPI:
     @staticmethod
     def aggregate_traffic_data():
-        iris_tile_matching = IrisTileMatchingAPI.load_matching()
-        aggregator = Aggregator(iris_tile_matching=iris_tile_matching)
+        geo_matching = GeoMatchingAPI.load_matching()
+        aggregator = Aggregator(geo_matching=geo_matching)
         aggregator.aggregate_traffic_data()
-
-
-def test():
-    c = City.LYON
-    s = Service.YOUTUBE
-    d = date(2019, 3, 16)
-    tt = TrafficType.DL
-    agg = Aggregator(iris_tile_matching=IrisTileMatchingAPI.load_matching())
-    data = agg._aggregate_traffic_data_file(city=c, service=s, traffic_type=tt, day=d)
-    # DataIO.save_iris_aggregated_traffic_data(data=data, traffic_type=tt, city=c, service=s, day=d)
 
 
 
