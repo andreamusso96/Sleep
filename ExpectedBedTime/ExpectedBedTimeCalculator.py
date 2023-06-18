@@ -47,7 +47,7 @@ class ExpectedBedTimeCalculator:
 
     def _get_smoothed_traffic_time_series(self):
         traffic_time_series_by_location_rough = self.city_traffic_data.get_traffic_time_series_by_location()
-        traffic_time_series_by_location = traffic_time_series_by_location_rough.rolling(window=3, axis=0, center=True).mean().dropna(axis=0, how='all')
+        traffic_time_series_by_location = traffic_time_series_by_location_rough.rolling(window=self.window_smoothing, axis=0, center=True).mean().dropna(axis=0, how='all')
         return traffic_time_series_by_location
 
     def calculate_expected_bed_time(self):
