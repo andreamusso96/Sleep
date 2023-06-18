@@ -4,8 +4,6 @@ from typing import Dict, List
 import pandas as pd
 from statsmodels.tsa.seasonal import MSTL, DecomposeResult
 
-from config import TEMP_DATA_PATH
-
 
 class TimeSeriesDecomposer:
     def __init__(self, time_series: pd.DataFrame, periods: List[int], windows: List[int]):
