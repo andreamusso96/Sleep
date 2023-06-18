@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from config import ELECTION_DATA_PATH
+from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 
 
 class ElectionDataRaw:
@@ -70,7 +71,7 @@ class ElectionData:
     def load(self):
         data = pd.read_csv(self.file_path, low_memory=False)
         data['municipality_code'] = data['department_code'].astype(str).str.zfill(2) + data['municipality_code'].astype(str).str.zfill(3)
-        data['polling_station'] = data['municipality_code'] + data['polling_station_code']
+        data[GeoDataType.POLLING_STATION.value] = data['municipality_code'] + data['polling_station_code']
         data.drop(columns=['department_code', 'department_name'], inplace=True)
         return data
 

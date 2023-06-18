@@ -244,6 +244,7 @@ class TrafficDataDimensions(Enum):
     SERVICE = 'service'
     TIME = 'time'
     DAY = 'day'
+    DATETIME = 'datetime'
 
 
 class Calendar:

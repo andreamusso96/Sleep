@@ -30,7 +30,7 @@ class DataIO:
         elif service is not None and day is None and city is None:
             return DataIO._service_traffic_data(traffic_type=traffic_type, geo_data_type=geo_data_type, service=service)
         else:
-            raise ValueError(f'Invalid parameters for DataIO.load_traffic_data: traffic_type={traffic_type}, aggregation_level={geo_data_type}, city={city}, service={service}, day={day}')
+            raise ValueError(f'Invalid parameters for DataIO.load_traffic_data: traffic_type={traffic_type}, geo_data_type={geo_data_type}, city={city}, service={service}, day={day}')
 
     @staticmethod
     def save_iris_aggregated_traffic_data(data: pd.DataFrame, traffic_type: TrafficType, city: City, service: Service, day: date):
@@ -46,7 +46,7 @@ class DataIO:
         data_vals = []
         days = DataIO.get_days()
         for day in tqdm(days):
-            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=geo_data_type, city=city, service=service, day=day) for service in Service.get_services(traffic_type=traffic_type))
+            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, geo_data_type=geo_data_type, city=city, service=service, day=day) for service in Service.get_services(traffic_type=traffic_type))
             data_vals.append(np.stack(data_vals_day, axis=-1))
 
         data = np.stack(data_vals, axis=-1)
@@ -61,7 +61,7 @@ class DataIO:
     @staticmethod
     def _city_service_traffic_data(traffic_type: TrafficType, geo_data_type: GeoDataType, city: City, service: Service) -> xr.DataArray:
         days = DataIO.get_days()
-        data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=geo_data_type, city=city, service=service, day=day) for day in days)
+        data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, geo_data_type=geo_data_type, city=city, service=service, day=day) for day in days)
         data = np.stack(data_vals, axis=-1)
         coords = {geo_data_type.value: DataIO.get_location_ids(geo_data_type=geo_data_type, city=city),
                   TrafficDataDimensions.TIME.value: DataIO.get_times(),
@@ -72,7 +72,7 @@ class DataIO:
 
     @staticmethod
     def _city_day_traffic_data(traffic_type: TrafficType, geo_data_type: GeoDataType, city: City, day: date) -> xr.DataArray:
-        data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=geo_data_type, city=city, service=service, day=day) for service in Service.get_services(traffic_type=traffic_type))
+        data_vals = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, geo_data_type=geo_data_type, city=city, service=service, day=day) for service in Service.get_services(traffic_type=traffic_type))
         data = np.stack(data_vals, axis=-1)
         coords = {geo_data_type.value: DataIO.get_location_ids(geo_data_type=geo_data_type, city=city),
                   TrafficDataDimensions.TIME.value: DataIO.get_times(),
@@ -97,7 +97,7 @@ class DataIO:
         data_vals = []
         location_ids = []
         for city in tqdm(City):
-            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, aggregation_level=geo_data_type, city=city, service=service, day=day) for day in DataIO.get_days())
+            data_vals_day = Parallel(n_jobs=-1)(delayed(DataIO._load_traffic_data_base)(traffic_type=traffic_type, geo_data_type=geo_data_type, city=city, service=service, day=day) for day in DataIO.get_days())
             data_vals.append(np.stack(data_vals_day, axis=-1))
             location_ids += DataIO.get_location_ids(geo_data_type=geo_data_type, city=city)
 

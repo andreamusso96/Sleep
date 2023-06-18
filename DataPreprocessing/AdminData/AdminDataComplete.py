@@ -27,9 +27,9 @@ class AdminData:
         equip_metadata = pd.read_csv(self.equip_metadata_file_path)
         return pop_metadata, equip_metadata
 
-    def get_admin_data(self, iris_codes: List[str] = None, only_iris_habitat: bool = True, coarsened_equip: bool = True, selected_pop_vars: bool = True):
-        if iris_codes is not None:
-            iris_in_intersection = np.intersect1d(iris_codes, self.data.index)
+    def get_admin_data(self, subset: List[str] = None, only_iris_habitat: bool = True, coarsened_equip: bool = True, selected_pop_vars: bool = True):
+        if subset is not None:
+            iris_in_intersection = np.intersect1d(subset, self.data.index)
             data = self.data.loc[iris_in_intersection].copy()
         else:
             data = self.data.copy()

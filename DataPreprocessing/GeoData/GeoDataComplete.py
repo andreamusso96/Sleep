@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 from enum import Enum
 
 import pandas as pd
@@ -32,15 +32,20 @@ class GeoData:
         elif geo_data_type == GeoDataType.POLLING_STATION:
             self.geo_data[geo_data_type.POLLING_STATION.value] = PollingStationGeoData()
 
-    def get_matched_geo_data(self, geometry: GeoDataType, other: GeoDataType, codes: List[str] = None):
-        geo_data = pd.merge(self.matching.data, self.geo_data[geometry.value].data, left_on=geometry.value, right_on=geometry.value, how='inner')
-        geo_data = geo_data[[other.value, geometry.value, 'geometry']]
-        geo_data = geo_data.drop_duplicates(subset=[other.value, geometry.value], keep='first')
-        if codes is not None:
-            geo_data = geo_data[geo_data[other.value].isin(codes)]
-        return geo_data.copy()
+    def get_geo_data(self, geometry: GeoDataType, subset: List[str] = None, other_geo_data_types: Union[List[GeoDataType], GeoDataType] = None):
+        geo_data = self.geo_data[geometry.value].data
+        cols_to_keep = [geometry.value, 'geometry']
 
-    def get_areas(self, geo_data_type: GeoDataType):
-        return self.geo_data[geo_data_type.value].data.set_index(geo_data_type.value).to_crs(epsg=2154).area
+        if subset is not None:
+            geo_data = geo_data[geo_data[geometry.value].isin(subset)]
+
+        if other_geo_data_types is not None:
+            if isinstance(other_geo_data_types, GeoDataType):
+                other_geo_data_types = [other_geo_data_types]
+            geo_data = geo_data.merge(self.matching.data.drop_duplicates(subset=[geometry.value]), on=geometry.value, how='left')
+            cols_to_keep += [gdt.value for gdt in other_geo_data_types]
+
+        geo_data = geo_data[cols_to_keep].copy()
+        return geo_data
 
 
