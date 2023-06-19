@@ -3,7 +3,7 @@ from datetime import time, datetime, timedelta
 import pandas as pd
 import numpy as np
 
-from DataPreprocessing.TrafficData.Data import CityTrafficData
+from DataInterface.TrafficDataInterface import CityTrafficData
 from ExpectedBedTime.ExpectedBedTime import ExpectedBedTime
 
 

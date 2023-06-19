@@ -10,9 +10,8 @@ import plotly.graph_objs as go
 import pandas as pd
 import geopandas as gpd
 
-from DataPreprocessing.GeoData.GeoDataComplete import GeoData
-from DataPreprocessing.GeoData.GeoDataType import GeoDataType
-from Utils import TrafficDataDimensions
+from DataInterface.GeoDataInterface import GeoData, GeoDataType
+from DataInterface.TrafficDataInterface import TrafficDataDimensions
 
 
 class SessionDistribution:

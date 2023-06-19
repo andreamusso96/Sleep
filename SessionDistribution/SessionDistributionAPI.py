@@ -2,7 +2,7 @@ from datetime import time
 from typing import List, Iterator
 
 
-from DataPreprocessing.TrafficData.Data import CityTrafficData
+from DataInterface.TrafficDataInterface import CityTrafficData
 from SessionDistribution.SessionDistribution import SessionDistribution
 from SessionDistribution.SessionDistributionCalculator import SessionDistributionCalculator
 

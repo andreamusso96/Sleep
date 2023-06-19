@@ -10,9 +10,8 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
 
-from DataPreprocessing.AdminData.AdminDataComplete import AdminData
-from DataPreprocessing.GeoData.GeoDataType import GeoDataType
-from DataPreprocessing.GeoData.GeoDataComplete import GeoData
+from DataInterface.AdminDataInterface import AdminData
+from DataInterface.GeoDataInterface import GeoData, GeoDataType
 from ExpectedBedTime.ExpectedBedTimeAPI import ExpectedBedTime
 from typing import List
 
@@ -21,6 +20,7 @@ class FeatureConstructor:
     def __init__(self, admin_data: AdminData, geo_data: GeoData):
         self.admin_data = admin_data
         self.geo_data = geo_data
+
     def iris_centrality(self, iris: List[str]):
         iris_geo_data = self.geo_data.get_geo_data(geometry=GeoDataType.IRIS, subset=iris, other_geo_data_types=GeoDataType.CITY).to_crs(epsg=2154)
         city_geo_data = iris_geo_data[[GeoDataType.CITY.value, 'geometry']].dissolve(by=GeoDataType.CITY.value).reset_index()

@@ -1,15 +1,14 @@
 from typing import List, Union
-from enum import Enum
-
-import pandas as pd
 
 from DataPreprocessing.GeoData.GeoData import IrisGeoData, TileGeoData, WeatherStationGeoData, CityLatLongGeoData, PollingStationGeoData
 from DataPreprocessing.GeoData.GeoMatching import GeoMatchingAPI
 from DataPreprocessing.GeoData.GeoDataType import GeoDataType
+from DataInterface.DataInterface import DataInterface
 
 
-class GeoData:
+class GeoData(DataInterface):
     def __init__(self):
+        super().__init__()
         self.geo_data = {gdt.value: None for gdt in GeoDataType}
         self.matching = GeoMatchingAPI.load_matching(load_mappings=True)
 
@@ -21,16 +20,6 @@ class GeoData:
 
         for gdt in geo_data_type:
             self._load_geo_data_type(geo_data_type=gdt)
-
-    def _load_geo_data_type(self, geo_data_type: GeoDataType):
-        if geo_data_type == GeoDataType.IRIS:
-            self.geo_data[geo_data_type.IRIS.value] = IrisGeoData()
-        elif geo_data_type == GeoDataType.WEATHER_STATION:
-            self.geo_data[geo_data_type.WEATHER_STATION.value] = WeatherStationGeoData()
-        elif geo_data_type == GeoDataType.CITY:
-            self.geo_data[geo_data_type.CITY.value] = CityLatLongGeoData()
-        elif geo_data_type == GeoDataType.POLLING_STATION:
-            self.geo_data[geo_data_type.POLLING_STATION.value] = PollingStationGeoData()
 
     def get_geo_data(self, geometry: GeoDataType, subset: List[str] = None, other_geo_data_types: Union[List[GeoDataType], GeoDataType] = None):
         geo_data = self.geo_data[geometry.value].data
@@ -50,4 +39,12 @@ class GeoData:
         geo_data = geo_data[cols_to_keep].copy()
         return geo_data
 
-
+    def _load_geo_data_type(self, geo_data_type: GeoDataType):
+        if geo_data_type == GeoDataType.IRIS:
+            self.geo_data[geo_data_type.IRIS.value] = IrisGeoData()
+        elif geo_data_type == GeoDataType.WEATHER_STATION:
+            self.geo_data[geo_data_type.WEATHER_STATION.value] = WeatherStationGeoData()
+        elif geo_data_type == GeoDataType.CITY:
+            self.geo_data[geo_data_type.CITY.value] = CityLatLongGeoData()
+        elif geo_data_type == GeoDataType.POLLING_STATION:
+            self.geo_data[geo_data_type.POLLING_STATION.value] = PollingStationGeoData()

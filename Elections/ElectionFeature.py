@@ -8,8 +8,7 @@ import numpy as np
 import geopandas as gpd
 import plotly.graph_objects as go
 
-from DataPreprocessing.GeoData.GeoDataComplete import GeoData
-from DataPreprocessing.GeoData.GeoDataType import GeoDataType
+from DataInterface.GeoDataInterface import GeoData, GeoDataType
 
 
 class ElectionFeatureName(Enum):

@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 
-from Utils import Service
-from DataPreprocessing.GeoData.GeoDataComplete import GeoData, GeoDataType
+from DataInterface.TrafficDataInterface import Service
+from DataInterface.GeoDataInterface import GeoData, GeoDataType
 
 
 class ServiceConsumptionFeatureName(Enum):

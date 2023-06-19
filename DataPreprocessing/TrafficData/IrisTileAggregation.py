@@ -4,8 +4,9 @@ from joblib import Parallel, delayed
 
 import pandas as pd
 
-from Utils import City, Service, TrafficType
-from DataIO import DataIO
+from Utils import City
+from DataPreprocessing.TrafficData.Enums import Service, TrafficType
+from DataPreprocessing.TrafficData.DataIO import DataIO
 from DataPreprocessing.GeoData.GeoMatching import GeoMatchingAPI, GeoMatching
 from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 

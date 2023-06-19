@@ -8,9 +8,9 @@ from tqdm import tqdm
 import pandas as pd
 
 from config import TRAFFIC_DATA_PATH, GEO_DATA_PATH
-from Utils import TrafficType, City, Service, TrafficDataDimensions
-from DataPreprocessing.GeoData.GeoMatching import GeoMatchingAPI
-from DataPreprocessing.GeoData.GeoDataType import GeoDataType
+from Utils import City
+from DataPreprocessing.TrafficData.Enums import TrafficType, Service, TrafficDataDimensions
+from DataInterface.GeoDataInterface import GeoMatchingAPI, GeoDataType
 
 
 class DataIO:

@@ -129,17 +129,33 @@ class Revenus(AdminData):
             raise ValueError(f'Invalid iris: {iris}')
 
 
-class AdminComplete(AdminData):
+class SelectedPopulationVariables:
+    def __init__(self):
+        self.file_path = f'{ADMIN_DATA_PATH}/selected_population_variables.csv'
+        self.data = pd.read_excel(f'{ADMIN_DATA_PATH}/selected_population_variables.xlsx', header=0)
+
+    def get_selected_population_variables(self):
+        return list(self.data['COD_VAR'])
+
+
+class AdminDataComplete:
     def __init__(self, year: int = 2019):
-        super().__init__(AdminDataFileName.ALL, year=year)
+        self.year = year
+        self.file_path = f'{ADMIN_DATA_PATH}/{self.year}/{AdminDataFileName.ALL.value}'
+        self.pop_metadata_file_path = f'{ADMIN_DATA_PATH}/{self.year}/{AdminDataFileName.ALL.value.replace(".csv", "MetaData.csv")}'
+        self.equip_metadata_file_path = f'{ADMIN_DATA_PATH}/{2021}/{AdminDataFileName.EQUIPEMENTS.value.replace("Denombrement.csv", "Classification.csv")}'
+        self.selected_pop_vars_file_path = f'{ADMIN_DATA_PATH}/selected_population_variables.csv'
+        self.data = self.load()
+        self.pop_metadata, self.equip_metadata, self.selected_pop_vars = self.load_metadata()
 
     def load(self):
         data = pd.read_csv(self.file_path, dtype={'IRIS': str}, low_memory=False)
         data.sort_values(by='iris', inplace=True)
-        self.data = data
+        data.set_index('iris', inplace=True)
         return data
 
     def load_metadata(self):
-        metadata = pd.read_csv(self.metadata_file_path)
-        self.metadata = metadata
-        return metadata
+        pop_metadata = pd.read_csv(self.pop_metadata_file_path)
+        equip_metadata = pd.read_csv(self.equip_metadata_file_path)
+        selected_pop_vars = pd.read_excel(f'{ADMIN_DATA_PATH}/selected_population_variables.xlsx', header=0)
+        return pop_metadata, equip_metadata, selected_pop_vars

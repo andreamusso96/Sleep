@@ -1,20 +1,20 @@
 from datetime import time, date, datetime, timedelta
 from typing import List
-import itertools
 
 import pandas as pd
-import xarray
 import xarray as xr
 import numpy as np
 
-from Utils import City, TrafficType, TrafficDataDimensions, Calendar, Anomalies
-from DataIO import DataIO
-from DataPreprocessing.GeoData.GeoDataType import GeoDataType
+from Utils import City, Calendar, Anomalies
+from DataPreprocessing.TrafficData.Enums import TrafficType, TrafficDataDimensions, Service  # noqa
+from DataPreprocessing.TrafficData.DataIO import DataIO
+from DataInterface.GeoDataInterface import GeoDataType
+from DataInterface.DataInterface import DataInterface
 
 
-class CityTrafficData:
-    def __init__(self, city: City, geo_data_type: GeoDataType = GeoDataType.IRIS,
-                 traffic_type: TrafficType = TrafficType.USERS):
+class CityTrafficData(DataInterface):
+    def __init__(self, city: City, geo_data_type: GeoDataType = GeoDataType.IRIS, traffic_type: TrafficType = TrafficType.USERS):
+        super().__init__()
         self.city = city
         self.aggregation_level = geo_data_type
         self.traffic_type = traffic_type

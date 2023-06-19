@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.preprocessing import StandardScaler
 
 from ExpectedBedTime.ExpectedBedTimeAPI import ExpectedBedTime
-from DataPreprocessing.AdminData.AdminDataComplete import AdminData
+from DataInterface.AdminDataInterface import AdminData
 from config import ADMIN_DATA_PATH
 
 

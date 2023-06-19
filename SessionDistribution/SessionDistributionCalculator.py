@@ -5,10 +5,10 @@ import pandas as pd
 import numpy as np
 import xarray as xr
 
-from DataPreprocessing.TrafficData.Data import CityTrafficData
-from DataPreprocessing.GeoData.GeoDataType import GeoDataType
+from DataInterface.GeoDataInterface import GeoDataType
+from DataInterface.TrafficDataInterface import CityTrafficData
+from DataInterface.TrafficDataInterface import TrafficDataDimensions
 from SessionDistribution.SessionDistribution import SessionDistribution
-from Utils import TrafficDataDimensions
 
 
 class Chunker:

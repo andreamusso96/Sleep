@@ -2,7 +2,7 @@ from datetime import time
 from typing import List, Iterator
 
 
-from DataPreprocessing.TrafficData.Data import CityTrafficData
+from DataInterface.TrafficDataInterface import CityTrafficData
 from ExpectedBedTime.ExpectedBedTime import ExpectedBedTime
 from ExpectedBedTime.ExpectedBedTimeCalculator import ExpectedBedTimeCalculator
 from ExpectedBedTime.Plots import StartBedTimeRobustness
