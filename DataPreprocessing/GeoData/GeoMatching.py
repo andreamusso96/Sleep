@@ -24,7 +24,7 @@ class GeoMatching:
 
     def load(self):
         data = pd.read_csv(filepath_or_buffer=self.file_path, sep=',',
-                           dtype={GeoDataType.TILE.value: int, GeoDataType.IRIS.value: str})
+                           dtype={GeoDataType.TILE.value: int, GeoDataType.IRIS.value: str, GeoDataType.WEATHER_STATION.value: str, GeoDataType.CITY.value: str, GeoDataType.POLLING_STATION.value: str})
         return data
 
     def _mapping_from_city_tile_to_iris(self):
@@ -91,10 +91,11 @@ class GeoMatchingAPI:
 
     @staticmethod
     def _get_iris_tile_matching(iris_geo_data: IrisGeoData):
+        """"
         tile_geo_data = [TileGeoData(city=city) for city in City]
         iris_tile_matcher = IrisTileMatcher(tile_geo_data=tile_geo_data, iris_geo_data=iris_geo_data)
-        matching = iris_tile_matcher.get_matching()
-        # matching = pd.read_csv(filepath_or_buffer=f'{GEO_DATA_PATH}/IrisTileMatching.csv', dtype={GeoDataType.TILE.value: int, GeoDataType.IRIS.value: str})
+        matching = iris_tile_matcher.get_matching()"""
+        matching = pd.read_csv(filepath_or_buffer=f'{GEO_DATA_PATH}/IrisTileMatching.csv', dtype={GeoDataType.TILE.value: int, GeoDataType.IRIS.value: str})
         return matching
 
     @staticmethod

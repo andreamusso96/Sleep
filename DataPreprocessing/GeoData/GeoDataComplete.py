@@ -42,8 +42,10 @@ class GeoData:
         if other_geo_data_types is not None:
             if isinstance(other_geo_data_types, GeoDataType):
                 other_geo_data_types = [other_geo_data_types]
-            geo_data = geo_data.merge(self.matching.data.drop_duplicates(subset=[geometry.value]), on=geometry.value, how='left')
+            other_geo_dt_vals = [gdt.value for gdt in other_geo_data_types]
+            geo_data = geo_data.merge(self.matching.data.drop_duplicates(subset=[geometry.value] + other_geo_dt_vals), on=geometry.value, how='left')
             cols_to_keep += [gdt.value for gdt in other_geo_data_types]
+
 
         geo_data = geo_data[cols_to_keep].copy()
         return geo_data

@@ -54,8 +54,7 @@ class SessionDistribution:
         fig.add_trace(trace_expected_session_time)
         fig.update_layout(title='Expected session time', xaxis_title='Iris', yaxis_title='Expected session',
                           xaxis_rangeslider_visible=True, font=dict(size=18), template='plotly')
-        fig.update_yaxes(title_text='Expected Session Timem', tickvals=np.arange(1, len(self.time_index) + 1), ticktext=self.time_index)
-        fig.update_xaxes(title_text='Location')
+        fig.update_yaxes(tickvals=np.arange(1, len(self.time_index) + 1), ticktext=self.time_index)
         fig.show(renderer='browser')
 
     def compute_expectation_by_location(self, iris: List[str] = None):

@@ -78,7 +78,17 @@ class PollingStationGeoData(GeoData):
 
     def load(self) -> gpd.GeoDataFrame:
         data = gpd.read_file(self.file_name)
+        data = PollingStationGeoData._rename_and_select_columns(data=data)
+        data = PollingStationGeoData._format_polling_station_codes(data=data)
+        data = PollingStationGeoData._convert_municipality_codes_to_parent_municipality_codes(data=data)
+        data[GeoDataType.POLLING_STATION.value] = data['parent_municipality_code'] + data['polling_station_code']
         data.dropna(subset=['geometry'], inplace=True)
+        data.sort_values(by=['parent_municipality_code', 'polling_station_code'], inplace=True)
+        data.reset_index(drop=True, inplace=True)
+        return data
+
+    @staticmethod
+    def _rename_and_select_columns(data):
         column_names = {
             'code_insee': 'municipality_code',
             'code_bureau_vote': 'polling_station_code',
@@ -86,11 +96,6 @@ class PollingStationGeoData(GeoData):
         }
         data = data[column_names.keys()].copy()
         data.rename(columns=column_names, inplace=True)
-        data = PollingStationGeoData._format_polling_station_codes(data=data)
-        data[GeoDataType.POLLING_STATION.value] = data['municipality_code'] + data['polling_station_code']
-        data.dropna(subset=['geometry'], inplace=True)
-        data.sort_values(by=['municipality_code', 'polling_station_code'], inplace=True)
-        data.reset_index(drop=True, inplace=True)
         return data
 
     @staticmethod
@@ -100,6 +105,23 @@ class PollingStationGeoData(GeoData):
         data.drop(columns=['polling_station_code_is_correct'], inplace=True)
         data['polling_station_code'] = data['polling_station_code'].apply(lambda x: str(x).zfill(4))
         return data
+
+    @staticmethod
+    def _convert_municipality_codes_to_parent_municipality_codes(data):
+        crosswalk_parent_municipality_code_to_municipality_code = PollingStationGeoData._crosswalk_parent_municipality_code_to_municipality_code()
+        data['parent_municipality_code'] = data['municipality_code'].apply(lambda x: crosswalk_parent_municipality_code_to_municipality_code[x] if x in crosswalk_parent_municipality_code_to_municipality_code else pd.NA)
+        data.drop(columns=['municipality_code'], inplace=True)
+        data.dropna(subset=['parent_municipality_code'], inplace=True)
+        return data
+
+    @staticmethod
+    def _crosswalk_parent_municipality_code_to_municipality_code():
+        crosswalk = pd.read_csv(f'{GEO_DATA_PATH}/PollingStationGeo/commune_codes-01012019.csv', low_memory=False, dtype={'com': str, 'comparent': str})[['com', 'comparent']]
+        crosswalk.rename(columns={'com': 'municipality_code', 'comparent': 'parent_municipality_code'}, inplace=True)
+        crosswalk.fillna(axis=1, inplace=True, method='ffill')
+        crosswalk_map = crosswalk.set_index('municipality_code')['parent_municipality_code'].to_dict()
+        return crosswalk_map
+
 
     @staticmethod
     def is_castable_to_int(value):

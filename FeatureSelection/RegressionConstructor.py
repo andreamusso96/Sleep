@@ -115,7 +115,7 @@ class Regression:
         return trace_data, trace_regression_forecasts
 
     def _layout(self, fig: go.Figure,  x_axis_label: str, ytickvals: np.ndarray, yticktext: List[str], title: str):
-        fig.update_layout(title=title, xaxis_title=x_axis_label, yaxis_title='Expected bed time')
+        fig.update_layout(title=title, xaxis_title=x_axis_label, yaxis_title='Expected bed time', template='plotly')
         if ytickvals is not None and yticktext is not None:
             fig.update_yaxes(tickvals=ytickvals, ticktext=yticktext)
 
