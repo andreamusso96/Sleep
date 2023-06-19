@@ -20,7 +20,7 @@ class SessionDistribution:
         self.end = end
         self.time_index = self.data.coords[TrafficDataDimensions.TIME.value].values
 
-    def expectation_by_location(self, subset: List[str]):
+    def expectation_by_location(self, subset: List[str] = None):
         data = self.data.sel(iris=subset) if subset is not None else self.data
         time_since_start = xr.DataArray(np.arange(1, len(data.coords['time'].values) + 1),
                                         dims=TrafficDataDimensions.TIME.value,
@@ -31,7 +31,7 @@ class SessionDistribution:
         expectation_by_location = pd.concat([expectation_by_location, std_by_location], axis=1)
         expectation_by_location['n_obs'] = len(data.coords[TrafficDataDimensions.DAY.value].values)
         expectation_by_location.sort_values(by='expectation', inplace=True)
-        expectation_by_location = Feature(data=expectation_by_location, name='session_expectation')
+        expectation_by_location = Feature(data=expectation_by_location.rename(columns={'expectation':'session_expectation'}), name='session_expectation')
         return expectation_by_location
 
     def distribution_plot(self, iris: List[str] = None):

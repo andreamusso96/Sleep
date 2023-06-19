@@ -26,15 +26,17 @@ class ServiceConsumptionFeatureCalculator(FeatureCalculator):
         return service
 
     def get_consumption_feature(self, feature: ServiceConsumptionFeatureName, subset_location: List[str] = None, subset_service: List[Service] = None) -> Feature:
-        service_consumption_by_location = self.consumption.loc[self._get_service(subset=subset_service), subset_location]
+        service_consumption_by_location = self.consumption[subset_location] if subset_location is not None else self.consumption
+        service_consumption_by_location = service_consumption_by_location.loc[self._get_service(subset=subset_service)]
+
         if feature == ServiceConsumptionFeatureName.ENTROPY:
             probabilities_of_service_usage = service_consumption_by_location / service_consumption_by_location.sum(axis=0)
-            entropy_vals = probabilities_of_service_usage.apply(self.entropy, axis=1).to_frame(name=ServiceConsumptionFeatureName.ENTROPY.value)
+            entropy_vals = probabilities_of_service_usage.apply(self.entropy, axis=0).to_frame(name=ServiceConsumptionFeatureName.ENTROPY.value)
             entropy = Feature(data=entropy_vals, name=ServiceConsumptionFeatureName.ENTROPY.value)
             return entropy
-        if feature == ServiceConsumptionFeatureName.SIMPSON:
+        elif feature == ServiceConsumptionFeatureName.SIMPSON:
             probabilities_of_service_usage = service_consumption_by_location / service_consumption_by_location.sum(axis=0)
-            simpson_vals = probabilities_of_service_usage.apply(self.simpson, axis=1).to_frame(name=ServiceConsumptionFeatureName.SIMPSON.value)
+            simpson_vals = probabilities_of_service_usage.apply(self.simpson, axis=0).to_frame(name=ServiceConsumptionFeatureName.SIMPSON.value)
             simpson = Feature(data=simpson_vals, name=ServiceConsumptionFeatureName.SIMPSON.value)
             return simpson
         else:

@@ -36,7 +36,7 @@ class IrisFeatureCalculator(FeatureCalculator):
         city_density = np.divide(city_area_population['P19_POP'], city_area_population['AREA'], out=np.zeros_like(city_area_population['P19_POP']), where=city_area_population['AREA'] != 0).to_frame(name='density')
         city_density_map = {city: density for city, density in zip(city_density.index, city_density['density'])}
         iris_city_area_population['density'] = iris_city_area_population[GeoDataType.CITY.value].map(city_density_map)
-        iris_density_of_city = Feature(data=iris_city_area_population[['density']].rename({'density': 'density_of_city'}), name='density_of_city')
+        iris_density_of_city = Feature(data=iris_city_area_population[['density']].rename(columns={'density': 'density_of_city'}), name='density_of_city')
         return iris_density_of_city
 
     def business_density(self, subset: List[str]) -> Feature:

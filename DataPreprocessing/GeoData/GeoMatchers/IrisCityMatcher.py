@@ -20,11 +20,11 @@ class IrisCityMatcher:
 
     @staticmethod
     def _select_cities_in_net_mob_sample(city_geo_data: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        city_geo_data_in_net_mob_sample = city_geo_data.loc[city_geo_data['city'].isin([city.value for city in City])]
+        city_geo_data_in_net_mob_sample = city_geo_data.loc[city_geo_data[GeoDataType.CITY.value].isin([city.value for city in City])]
         return city_geo_data_in_net_mob_sample
 
     @staticmethod
     def _spatial_join(city_geo_data: gpd.GeoDataFrame, iris_geo_data: gpd.GeoDataFrame) -> pd.DataFrame:
         iris_city_matching = iris_geo_data.sjoin_nearest(city_geo_data, how='left', distance_col='distance')
-        iris_city_matching = iris_city_matching.loc[iris_city_matching.groupby('subset')['distance'].idxmin()][['subset', 'city']]
+        iris_city_matching = iris_city_matching.loc[iris_city_matching.groupby(GeoDataType.IRIS.value)['distance'].idxmin()][[GeoDataType.IRIS.value, GeoDataType.CITY.value]]
         return iris_city_matching

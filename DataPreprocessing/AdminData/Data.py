@@ -3,6 +3,7 @@ from enum import Enum
 import pandas as pd
 
 from config import ADMIN_DATA_PATH
+from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 
 
 class AdminDataFileName(Enum):
@@ -42,9 +43,9 @@ class AdminDataBI(AdminData):
 
     def load(self):
         data = pd.read_csv(self.file_path, sep=';', dtype=self.dtype, low_memory=self.low_memory)
-        data.rename(columns={'IRIS': 'subset'}, inplace=True)
+        data.rename(columns={'IRIS': GeoDataType.IRIS.value}, inplace=True)
         data.drop(columns=self.cols_to_drop, inplace=True)
-        data.sort_values(by='subset', inplace=True)
+        data.sort_values(by=GeoDataType.IRIS.value, inplace=True)
         self.data = data
         return data
 
@@ -78,16 +79,16 @@ class Equipements(AdminData):
     def load(self):
         data = pd.read_csv(self.file_path, sep=';', usecols=self.cols_to_use, dtype=self.dtype)
         data = data[self.cols_to_use]
-        data.rename(columns={'DCIRIS': 'subset'}, inplace=True)
-        data = data.groupby(by=['subset', 'TYPEQU']).sum().reset_index()
-        data.sort_values(by='subset', inplace=True)
+        data.rename(columns={'DCIRIS': GeoDataType.IRIS.value}, inplace=True)
+        data = data.groupby(by=[GeoDataType.IRIS.value, 'TYPEQU']).sum().reset_index()
+        data.sort_values(by=GeoDataType.IRIS.value, inplace=True)
         self.data = data
         return data
 
     def get_equipment_data_iris_by_type(self, prefix: str = 'EQUIP_'):
         assert self.data is not None, 'Data not loaded'
-        equipements_iris_by_type = self.data.pivot(index='subset', columns='TYPEQU', values='NB_EQUIP').fillna(0).reset_index()
-        equipements_iris_by_type.rename(columns={col: f'{prefix}{col}' for col in equipements_iris_by_type.columns if col != 'subset'}, inplace=True)
+        equipements_iris_by_type = self.data.pivot(index=GeoDataType.IRIS.value, columns='TYPEQU', values='NB_EQUIP').fillna(0).reset_index()
+        equipements_iris_by_type.rename(columns={col: f'{prefix}{col}' for col in equipements_iris_by_type.columns if col != GeoDataType.IRIS.value}, inplace=True)
         return equipements_iris_by_type
 
 
@@ -108,9 +109,9 @@ class Revenus(AdminData):
 
     def load(self):
         data = pd.read_csv(self.file_path, sep=',', dtype=self.dtype)
-        data.rename(columns={'IRIS': 'subset'}, inplace=True)
-        data['subset'] = data['subset'].apply(self._reformat_iris_string)
-        data.sort_values(by='subset', inplace=True)
+        data.rename(columns={'IRIS': GeoDataType.IRIS.value}, inplace=True)
+        data[GeoDataType.IRIS.value] = data[GeoDataType.IRIS.value].apply(self._reformat_iris_string)
+        data.sort_values(by=GeoDataType.IRIS.value, inplace=True)
         self.data = data
         return data
 
@@ -126,7 +127,7 @@ class Revenus(AdminData):
         elif len(iris) == 8:
             return f'0{iris}'
         else:
-            raise ValueError(f'Invalid subset: {iris}')
+            raise ValueError(f'Invalid iris: {iris}')
 
 
 class SelectedPopulationVariables:
@@ -149,9 +150,9 @@ class AdminDataComplete:
         self.pop_metadata, self.equip_metadata, self.selected_pop_vars = self.load_metadata()
 
     def load(self):
-        data = pd.read_csv(self.file_path, dtype={'IRIS': str}, low_memory=False)
-        data.sort_values(by='subset', inplace=True)
-        data.set_index('subset', inplace=True)
+        data = pd.read_csv(self.file_path, dtype={GeoDataType.IRIS.value: str}, low_memory=False)
+        data.sort_values(by=GeoDataType.IRIS.value, inplace=True)
+        data.set_index(GeoDataType.IRIS.value, inplace=True)
         return data
 
     def load_metadata(self):

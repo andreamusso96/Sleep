@@ -30,7 +30,7 @@ class GeoMatching:
     def _mapping_from_city_tile_to_iris(self):
         mapping = {}
         for city in City:
-            city_matching_data = self.data[self.data['city'] == city.value].drop_duplicates(subset=[GeoDataType.TILE.value, GeoDataType.IRIS.value])
+            city_matching_data = self.data[self.data[GeoDataType.CITY.value] == city.value].drop_duplicates(subset=[GeoDataType.TILE.value, GeoDataType.IRIS.value])
             mapping[city.value] = {tile_id: iris_id for tile_id, iris_id in zip(city_matching_data[GeoDataType.TILE.value], city_matching_data[GeoDataType.IRIS.value])}
         return mapping
 
@@ -59,9 +59,9 @@ class GeoMatching:
 
     def get_weather_station(self, iris: str = None, city: City = None):
         if iris is None and city is None:
-            raise ValueError('Either subset or city must be provided')
+            raise ValueError('Either iris or city must be provided')
         if iris is not None and city is not None:
-            raise ValueError('Either subset or city must be provided')
+            raise ValueError('Either iris or city must be provided')
         if iris is not None:
             return self.mapping_from_iris_to_weather_station[iris]
         if city is not None:

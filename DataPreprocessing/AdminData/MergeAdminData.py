@@ -2,7 +2,8 @@ from typing import List
 
 import pandas as pd
 
-from DataPreprocessing.AdminData.Data import Activite, CouplesFamilleMenage, Diplomes, Equipements, Logement, Population, Revenus, AdminData, AdminComplete
+from DataPreprocessing.AdminData.Data import Activite, CouplesFamilleMenage, Diplomes, Equipements, Logement, Population, Revenus, AdminData
+from DataPreprocessing.GeoData.GeoDataType import GeoDataType
 
 
 class Merger:
@@ -47,7 +48,7 @@ class Merger:
 
     @staticmethod
     def _merge(dataset1: pd.DataFrame, dataset2: pd.DataFrame) -> pd.DataFrame:
-        merged_datasets = dataset1.merge(dataset2, on='subset', how='outer', suffixes=('', f'_duplicate'))
+        merged_datasets = dataset1.merge(dataset2, on=GeoDataType.IRIS.value, how='outer', suffixes=('', f'_duplicate'))
         merged_datasets.drop(columns=[c for c in merged_datasets.columns if c.endswith('_duplicate')], inplace=True)
         return merged_datasets
 
