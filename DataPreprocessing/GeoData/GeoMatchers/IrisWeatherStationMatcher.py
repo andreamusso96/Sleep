@@ -20,7 +20,7 @@ class IrisWeatherStationMatcher:
     @staticmethod
     def _spatial_join(weather_station_geo_data: gpd.GeoDataFrame, iris_geo_data: gpd.GeoDataFrame) -> pd.DataFrame:
         iris_weather_station_matching = iris_geo_data.sjoin_nearest(weather_station_geo_data, how='left', distance_col='distance')
-        iris_weather_station_matching = iris_weather_station_matching.loc[iris_weather_station_matching.groupby('iris')['distance'].idxmin()][['iris', 'ID']]
+        iris_weather_station_matching = iris_weather_station_matching.loc[iris_weather_station_matching.groupby('subset')['distance'].idxmin()][['subset', 'ID']]
         return iris_weather_station_matching
 
     @staticmethod

@@ -1,39 +1,20 @@
-from typing import List
-
-import numpy as np
 import pandas as pd
 from sklearn.feature_selection import f_classif, mutual_info_classif
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.preprocessing import StandardScaler
 
-from ExpectedBedTime.ExpectedBedTimeAPI import ExpectedBedTime
-from DataInterface.AdminDataInterface import AdminData
-from config import ADMIN_DATA_PATH
-
 
 class BasicFeatureImportanceCalculator:
-    def __init__(self, expected_bed_time: ExpectedBedTime, admin_data: AdminData):
-        self.expected_bed_time = expected_bed_time
-        self.admin_data = admin_data
+    def __init__(self, features: pd.DataFrame, labels: pd.DataFrame):
+        self.features = features
+        self.labels = labels
 
-    def compute_feature_importance(self, n_quantiles: int = 5):
-        features = self._get_features(iris_codes=self.expected_bed_time.data.index)
-        labels = self.expected_bed_time.assign_iris_to_quantile(n_quantiles=n_quantiles).loc[features.index]
-        feature_importance = self._estimate_feature_importance(features=features, labels=labels)
-        feature_importance = self._add_feature_description(feature_importance=feature_importance)
+    def compute_feature_importance(self) -> pd.DataFrame:
+        feature_importance = self._estimate_feature_importance(features=self.features, labels=self.labels)
         return feature_importance
-
-    def _add_feature_description(self, feature_importance: pd.DataFrame):
-        feature_importance['description'] = [self.admin_data.get_variable_description(var_name=var_name) for var_name in feature_importance.index]
-        return feature_importance
-
-    def _get_features(self, iris_codes: List[str]):
-        features = self.admin_data.get_admin_data(iris_codes=iris_codes)
-        features.dropna(axis=0, inplace=True, how='any')
-        return features
 
     @staticmethod
-    def _estimate_feature_importance(features, labels):
+    def _estimate_feature_importance(features: pd.DataFrame, labels: pd.DataFrame):
         f_statistic, p_values = f_classif(X=features, y=labels.values.flatten())
         mutual_information = mutual_info_classif(X=features, y=labels.values.flatten(), random_state=0)
         regression = BasicFeatureImportanceCalculator.run_regression(features=features, labels=labels)

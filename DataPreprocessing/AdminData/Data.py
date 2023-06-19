@@ -42,9 +42,9 @@ class AdminDataBI(AdminData):
 
     def load(self):
         data = pd.read_csv(self.file_path, sep=';', dtype=self.dtype, low_memory=self.low_memory)
-        data.rename(columns={'IRIS': 'iris'}, inplace=True)
+        data.rename(columns={'IRIS': 'subset'}, inplace=True)
         data.drop(columns=self.cols_to_drop, inplace=True)
-        data.sort_values(by='iris', inplace=True)
+        data.sort_values(by='subset', inplace=True)
         self.data = data
         return data
 
@@ -78,16 +78,16 @@ class Equipements(AdminData):
     def load(self):
         data = pd.read_csv(self.file_path, sep=';', usecols=self.cols_to_use, dtype=self.dtype)
         data = data[self.cols_to_use]
-        data.rename(columns={'DCIRIS': 'iris'}, inplace=True)
-        data = data.groupby(by=['iris', 'TYPEQU']).sum().reset_index()
-        data.sort_values(by='iris', inplace=True)
+        data.rename(columns={'DCIRIS': 'subset'}, inplace=True)
+        data = data.groupby(by=['subset', 'TYPEQU']).sum().reset_index()
+        data.sort_values(by='subset', inplace=True)
         self.data = data
         return data
 
     def get_equipment_data_iris_by_type(self, prefix: str = 'EQUIP_'):
         assert self.data is not None, 'Data not loaded'
-        equipements_iris_by_type = self.data.pivot(index='iris', columns='TYPEQU', values='NB_EQUIP').fillna(0).reset_index()
-        equipements_iris_by_type.rename(columns={col: f'{prefix}{col}' for col in equipements_iris_by_type.columns if col != 'iris'}, inplace=True)
+        equipements_iris_by_type = self.data.pivot(index='subset', columns='TYPEQU', values='NB_EQUIP').fillna(0).reset_index()
+        equipements_iris_by_type.rename(columns={col: f'{prefix}{col}' for col in equipements_iris_by_type.columns if col != 'subset'}, inplace=True)
         return equipements_iris_by_type
 
 
@@ -108,9 +108,9 @@ class Revenus(AdminData):
 
     def load(self):
         data = pd.read_csv(self.file_path, sep=',', dtype=self.dtype)
-        data.rename(columns={'IRIS': 'iris'}, inplace=True)
-        data['iris'] = data['iris'].apply(self._reformat_iris_string)
-        data.sort_values(by='iris', inplace=True)
+        data.rename(columns={'IRIS': 'subset'}, inplace=True)
+        data['subset'] = data['subset'].apply(self._reformat_iris_string)
+        data.sort_values(by='subset', inplace=True)
         self.data = data
         return data
 
@@ -126,7 +126,7 @@ class Revenus(AdminData):
         elif len(iris) == 8:
             return f'0{iris}'
         else:
-            raise ValueError(f'Invalid iris: {iris}')
+            raise ValueError(f'Invalid subset: {iris}')
 
 
 class SelectedPopulationVariables:
@@ -150,8 +150,8 @@ class AdminDataComplete:
 
     def load(self):
         data = pd.read_csv(self.file_path, dtype={'IRIS': str}, low_memory=False)
-        data.sort_values(by='iris', inplace=True)
-        data.set_index('iris', inplace=True)
+        data.sort_values(by='subset', inplace=True)
+        data.set_index('subset', inplace=True)
         return data
 
     def load_metadata(self):

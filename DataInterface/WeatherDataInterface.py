@@ -16,7 +16,7 @@ class WeatherData(DataInterface):
         elif city is not None:
             weather_station_code = self.geo_matching.get_weather_station(city=city)
         else:
-            raise ValueError('Either iris or city must be provided.')
+            raise ValueError('Either subset or city must be provided.')
         weather_station_data = self.weather_station_data.data[
             self.weather_station_data.data['numer_sta'] == weather_station_code]
         weather_station_data = self._reformat_weather_station_data(weather_station_data=weather_station_data)

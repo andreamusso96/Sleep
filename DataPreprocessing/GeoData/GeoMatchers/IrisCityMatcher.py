@@ -26,5 +26,5 @@ class IrisCityMatcher:
     @staticmethod
     def _spatial_join(city_geo_data: gpd.GeoDataFrame, iris_geo_data: gpd.GeoDataFrame) -> pd.DataFrame:
         iris_city_matching = iris_geo_data.sjoin_nearest(city_geo_data, how='left', distance_col='distance')
-        iris_city_matching = iris_city_matching.loc[iris_city_matching.groupby('iris')['distance'].idxmin()][['iris', 'city']]
+        iris_city_matching = iris_city_matching.loc[iris_city_matching.groupby('subset')['distance'].idxmin()][['subset', 'city']]
         return iris_city_matching

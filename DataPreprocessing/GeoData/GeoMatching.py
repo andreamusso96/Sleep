@@ -59,9 +59,9 @@ class GeoMatching:
 
     def get_weather_station(self, iris: str = None, city: City = None):
         if iris is None and city is None:
-            raise ValueError('Either iris or city must be provided')
+            raise ValueError('Either subset or city must be provided')
         if iris is not None and city is not None:
-            raise ValueError('Either iris or city must be provided')
+            raise ValueError('Either subset or city must be provided')
         if iris is not None:
             return self.mapping_from_iris_to_weather_station[iris]
         if city is not None:
