@@ -9,6 +9,11 @@ class TrafficType(Enum):
     USERS = 'Users'
 
 
+class ServiceType(Enum):
+    ENTERTAINMENT = 'entertainment'
+    ALL = 'all'
+
+
 class Service(Enum):
     TWITCH = 'Twitch'
     ORANGE_TV = 'Orange_TV'
@@ -80,17 +85,26 @@ class Service(Enum):
     YAHOO = 'Yahoo'
 
     @staticmethod
-    def get_services(traffic_type: TrafficType, return_values=False):
-        if traffic_type == TrafficType.USERS:
-            if return_values:
-                return [service.value for service in Service if Service.is_entertainment_service(service)]
+    def get_services(traffic_type: TrafficType = None, service_type: ServiceType = None, return_values=False):
+        assert traffic_type is not None or service_type is not None, 'Either traffic_type or service_type must be set'
+
+        if service_type is None:
+            if traffic_type == TrafficType.USERS:
+                service_type = ServiceType.ENTERTAINMENT
             else:
-                return [service for service in Service if Service.is_entertainment_service(service)]
+                service_type = ServiceType.ALL
+
+        if service_type == ServiceType.ENTERTAINMENT:
+            services = [service for service in Service if Service.is_entertainment_service(service)]
+        elif service_type == ServiceType.ALL:
+            services = [service for service in Service]
         else:
-            if return_values:
-                return [service.value for service in Service]
-            else:
-                return [service for service in Service]
+            raise ValueError(f'Invalid service_type {service_type}')
+
+        if return_values:
+            return [service.value for service in services]
+        else:
+            return services
 
     @staticmethod
     def is_entertainment_service(service):

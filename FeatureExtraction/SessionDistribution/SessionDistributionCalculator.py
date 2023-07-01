@@ -7,18 +7,19 @@ import xarray as xr
 
 from DataInterface.GeoDataInterface import GeoDataType
 from DataInterface.TrafficDataInterface import CityTrafficData
-from DataInterface.TrafficDataInterface import TrafficDataDimensions
+from DataInterface.TrafficDataInterface import TrafficDataDimensions, Service
 from FeatureExtraction.SessionDistribution.SessionDistribution import SessionDistribution
 from FeatureExtraction.SessionDistribution.Chunker import Chunker
 
 
 class SessionDistributionCalculator:
-    def __init__(self, city_traffic_data: CityTrafficData, start: time, end: time, window_smoothing: int = 3):
+    def __init__(self, city_traffic_data: CityTrafficData, start: time, end: time, window_smoothing: int = 3, services: List[Service] = None):
         super().__init__()
         self.city_traffic_data = city_traffic_data
         self.start = start
         self.end = end
         self.window_smoothing = window_smoothing
+        self.services = services
         self.traffic_time_series_by_location = self._get_smoothed_traffic_time_series()
         self.time_index = self._get_time_index()
         self.locations = list(self.traffic_time_series_by_location.columns)
@@ -32,7 +33,7 @@ class SessionDistributionCalculator:
         return time_index
 
     def _get_smoothed_traffic_time_series(self):
-        traffic_time_series_by_location_rough = self.city_traffic_data.get_traffic_time_series_by_location()
+        traffic_time_series_by_location_rough = self.city_traffic_data.get_traffic_time_series_by_location(services=self.services)
         traffic_time_series_by_location = traffic_time_series_by_location_rough.rolling(window=3, axis=0, center=True).mean().dropna(axis=0, how='all')
         return traffic_time_series_by_location
 

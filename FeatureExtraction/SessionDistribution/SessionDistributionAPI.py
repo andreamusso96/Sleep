@@ -9,7 +9,7 @@ from FeatureExtraction.SessionDistribution.SessionDistributionCalculator import 
 
 class SessionDistributionAPI:
     @staticmethod
-    def compute_session_distribution(traffic_data: Iterator[CityTrafficData] or CityTrafficData, start: time = time(21, 30), end: time = time(3, 30), window_smoothing: int = 3) -> SleepFeature:
+    def compute_session_distribution(traffic_data: Iterator[CityTrafficData] or CityTrafficData, start: time = time(21, 30), end: time = time(3, 30), window_smoothing: int = 3) -> SessionDistribution:
         if isinstance(traffic_data, CityTrafficData):
             traffic_data = [traffic_data]
 

@@ -1,8 +1,8 @@
-from datetime import time
+from datetime import time, date, timedelta
+from typing import List, Tuple, Union
 
 import numpy as np
 import xarray as xr
-from typing import List
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 import pandas as pd
@@ -20,19 +20,16 @@ class SessionDistribution:
         self.end = end
         self.time_index = self.data.coords[TrafficDataDimensions.TIME.value].values
 
-    def expectation_by_location(self, subset: List[str] = None):
-        data = self.data.sel(iris=subset) if subset is not None else self.data
-        time_since_start = xr.DataArray(np.arange(1, len(data.coords['time'].values) + 1),
-                                        dims=TrafficDataDimensions.TIME.value,
-                                        coords={TrafficDataDimensions.TIME.value: data.coords['time'].values})
-        daily_expectation_by_location = data.dot(time_since_start, dims=TrafficDataDimensions.TIME.value)
-        expectation_by_location = daily_expectation_by_location.mean(dim=TrafficDataDimensions.DAY.value).T.to_pandas().to_frame(name='expectation')
-        std_by_location = daily_expectation_by_location.std(dim=TrafficDataDimensions.DAY.value).T.to_pandas().to_frame(name='std')
-        expectation_by_location = pd.concat([expectation_by_location, std_by_location], axis=1)
-        expectation_by_location['n_obs'] = len(data.coords[TrafficDataDimensions.DAY.value].values)
-        expectation_by_location.sort_values(by='expectation', inplace=True)
-        expectation_by_location = Feature(data=expectation_by_location.rename(columns={'expectation':'session_expectation'}), name='session_expectation')
+    def expectation_by_location(self, subset_location: List[str] = None, timespan: Tuple[Union[date, None], Union[date, None]] = None):
+        expectation_by_location = self._get_expectation_over_single_dimension(subset_location=subset_location, timespan=timespan, aggregate_over=TrafficDataDimensions.DAY.value)
+        expectation_by_location.sort_values(by='session_expectation', inplace=True)
+        expectation_by_location = Feature(data=expectation_by_location, name='session_expectation')
         return expectation_by_location
+
+    def expectation_by_day(self, subset_location: List[str] = None, timespan: Tuple[Union[date, None], Union[date, None]] = None):
+        expectation_by_day = self._get_expectation_over_single_dimension(subset_location=subset_location, timespan=timespan, aggregate_over=GeoDataType.IRIS.value)
+        expectation_by_day.sort_index(inplace=True)
+        return expectation_by_day
 
     def distribution_plot(self, iris: List[str] = None):
         data = self.data.sel(iris=iris) if iris is not None else self.data
@@ -50,7 +47,48 @@ class SessionDistribution:
         fig.update_xaxes(title_text='Time of day', row=1, col=2)
         fig.show(renderer='browser')
 
+    def time_change_discontinuity_plot(self, z_confidence_interval: float = 1.96, subset_location: List[str] = None):
+        time_change = date(2019, 3, 31)
+        session_expectation_before_time_change = self.expectation_by_day(subset_location=subset_location, timespan=(None, time_change -timedelta(days=1)))
+        session_expectation_after_time_change = self.expectation_by_day(subset_location=subset_location, timespan=(time_change + timedelta(days=1), None))
+        confidence_interval_before_time_change = z_confidence_interval * session_expectation_before_time_change['std'].values / np.sqrt(session_expectation_before_time_change['n_obs'].values)
+        confidence_interval_after_time_change = z_confidence_interval * session_expectation_after_time_change['std'].values / np.sqrt(session_expectation_after_time_change['n_obs'].values)
+
+        fig = go.Figure()
+        x_before = session_expectation_before_time_change.index
+        x_after = session_expectation_after_time_change.index
+        y_before = session_expectation_before_time_change['session_expectation'].values
+        y_after = session_expectation_after_time_change['session_expectation'].values
+        fig.add_trace(go.Scatter(x=x_before, y=y_before, error_y=dict(type='data', array=confidence_interval_before_time_change, visible=True), name='Before time change'))
+        fig.add_trace(go.Scatter(x=x_after, y=y_after, error_y=dict(type='data', array=confidence_interval_after_time_change, visible=True), name='After time change'))
+        fig.add_trace(go.Scatter(x=x_before, y=np.mean(y_before) * np.ones(len(x_before)), name='Before time change average'))
+        fig.add_trace(go.Scatter(x=x_after, y=np.mean(y_after) * np.ones(len(x_after)), name='After time change average'))
+        fig.update_layout(title='Session expectation before and after time change', template='plotly', xaxis_title='Day of week', yaxis_title='Session expectation')
+        fig.show(renderer='browser')
+
+    def _get_expectation_over_single_dimension(self, subset_location: List[str], timespan: Tuple[Union[date, None], Union[date, None]], aggregate_over: str):
+        expectation_by_location_and_day = self._get_expectation_by_location_and_day(subset_location=subset_location, timespan=timespan)
+        expectation = expectation_by_location_and_day.mean(dim=aggregate_over).T.to_pandas().to_frame(name='session_expectation')
+        std = expectation_by_location_and_day.std(dim=aggregate_over).T.to_pandas().to_frame(name='std')
+        n_obs = len(expectation_by_location_and_day.coords[aggregate_over].values)
+        expectation_std_nobs = pd.concat([expectation, std], axis=1)
+        expectation_std_nobs['n_obs'] = n_obs
+        return expectation_std_nobs
+
+    def _get_expectation_by_location_and_day(self, subset_location: List[str], timespan: Tuple[Union[date, None], Union[date, None]]):
+        data = self._get_selected_data(subset_location=subset_location, timespan=timespan)
+
+        time_since_start = xr.DataArray(np.arange(1, len(data.coords['time'].values) + 1),
+                                        dims=TrafficDataDimensions.TIME.value,
+                                        coords={TrafficDataDimensions.TIME.value: data.coords['time'].values})
+        daily_expectation_by_location = data.dot(time_since_start, dims=TrafficDataDimensions.TIME.value)
+        return daily_expectation_by_location
+
+    def _get_selected_data(self, subset_location: List[str], timespan: Tuple[Union[date, None], Union[date, None]]):
+        data = self.data.sel(iris=subset_location) if subset_location is not None else self.data
+        data = data.sel(day=slice(timespan[0], timespan[1])) if timespan is not None else data
+        return data
+
     def join(self, other):
-        assert isinstance(other, SessionDistribution), 'SessionDistribution can only be joined with another SessionDistribution'
         assert np.array_equal(self.time_index, other.time_index), 'SessionDistribution can only be joined if they have the same time index'
         return SessionDistribution(session_distribution_data=xr.concat([self.data, other.data], dim=GeoDataType.IRIS.value), start=self.start, end=self.end)

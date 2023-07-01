@@ -32,12 +32,24 @@ class IrisFeatureCalculator(FeatureCalculator):
         iris_geo_data = self.geo_data.get_geo_data(geometry=GeoDataType.IRIS, subset=subset, other_geo_data_types=GeoDataType.CITY).to_crs(epsg=2154).set_index(GeoDataType.IRIS.value)
         iris_geo_data['AREA'] = iris_geo_data.area
         iris_city_area_population = pd.merge(population_data, iris_geo_data, left_index=True, right_index=True, how='inner')[[GeoDataType.CITY.value, 'P19_POP', 'AREA']]
-        city_area_population = iris_city_area_population.groupby(GeoDataType.CITY.value).sum()
+        city_area_population = iris_city_area_population.groupby(GeoDataType.CITY.value).median()
         city_density = np.divide(city_area_population['P19_POP'], city_area_population['AREA'], out=np.zeros_like(city_area_population['P19_POP']), where=city_area_population['AREA'] != 0).to_frame(name='density')
         city_density_map = {city: density for city, density in zip(city_density.index, city_density['density'])}
         iris_city_area_population['density'] = iris_city_area_population[GeoDataType.CITY.value].map(city_density_map)
-        iris_density_of_city = Feature(data=iris_city_area_population[['density']].rename(columns={'density': 'density_of_city'}), name='density_of_city')
+        iris_density_of_city = Feature(data=iris_city_area_population.rename(columns={'density': 'density_of_city'}), name='density_of_city')
         return iris_density_of_city
+
+    def population_of_city(self, subset: List[str]) -> Feature:
+        population_data = self.admin_data.get_admin_data(subset=subset)['P19_POP'].to_frame()
+        iris_geo_data = self.geo_data.get_geo_data(geometry=GeoDataType.IRIS, subset=subset,
+                                                   other_geo_data_types=GeoDataType.CITY).to_crs(epsg=2154).set_index(
+            GeoDataType.IRIS.value)
+        iris_city_population = pd.merge(population_data, iris_geo_data, left_index=True, right_index=True, how='inner')[[GeoDataType.CITY.value, 'P19_POP']]
+        city_population = iris_city_population.groupby(GeoDataType.CITY.value).sum()
+        city_population_map = {city: population for city, population in zip(city_population.index, city_population['P19_POP'])}
+        iris_city_population['population_of_city'] = iris_city_population[GeoDataType.CITY.value].map(city_population_map)
+        iris_population_of_city = Feature(data=iris_city_population, name='population_of_city')
+        return iris_population_of_city
 
     def business_density(self, subset: List[str]) -> Feature:
         codes_businesses_likely_to_be_open_at_night = ['A101', 'A104', 'A504', 'B101', 'B201', 'B204', 'B316',
@@ -62,12 +74,15 @@ class IrisFeatureCalculator(FeatureCalculator):
         var_share = pd.DataFrame(var_share, columns=var_vals.columns, index=var_vals.index)
         return var_share
 
-    def var_density(self, subset: List[str], var_names: Union[str, List[str]]) -> pd.DataFrame:
+    def var_density(self, subset: List[str], var_names: Union[str, List[str]], coarsened_equip: bool = False) -> pd.DataFrame:
         iris_area = self.geo_data.get_geo_data(geometry=GeoDataType.IRIS, subset=subset).to_crs(epsg=2154).set_index(GeoDataType.IRIS.value).area.to_frame(name='AREA')
-        var_vals = self.admin_data.get_admin_data(subset=subset, coarsened_equip=False, selected_pop_vars=False)[var_names]
+        var_vals = self.admin_data.get_admin_data(subset=subset, coarsened_equip=coarsened_equip, selected_pop_vars=False)[var_names]
         var_vals_and_area = pd.merge(var_vals, iris_area, left_index=True, right_index=True, how='inner')
         var_vals = var_vals_and_area[var_names]
         area = var_vals_and_area['AREA'].to_frame()
         var_densities = np.divide(var_vals.values, area.values, out=np.zeros_like(var_vals), where=area.values != 0)
         var_densities = pd.DataFrame(var_densities, columns=var_vals.columns, index=var_vals.index)
         return var_densities
+
+    def var(self, subset: List[str], var_names: Union[str, List[str]]) -> pd.DataFrame:
+        return self.admin_data.get_admin_data(subset=subset, coarsened_equip=False, selected_pop_vars=False)[var_names]

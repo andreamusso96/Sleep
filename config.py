@@ -8,6 +8,7 @@ if is_cluster:
     DATA_PATH = '/cluster/work/gess/coss/users/anmusso/NetMob'
 else:
     DATA_PATH = '/Users/anmusso/Desktop/PhD/NetMob/NetMobData/data'
+    FIGURE_PATH = '/Users/anmusso/Desktop/PhD/NetMob/Figures/'
 
 GEO_DATA_PATH = f'{DATA_PATH}/GeoData'
 TRAFFIC_DATA_PATH = f'{DATA_PATH}/TrafficData'

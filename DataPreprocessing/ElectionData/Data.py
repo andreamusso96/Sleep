@@ -74,10 +74,21 @@ class ElectionDataRaw:
         return data
 
 
+class PoliticalPartyOrientation:
+    def __init__(self):
+        self.file_path = f'{ELECTION_DATA_PATH}/orientation_political_parties.csv'
+        self.data = self.load()
+
+    def load(self):
+        data = pd.read_csv(self.file_path, low_memory=False)
+        return data
+
+
 class ElectionDataComplete:
     def __init__(self):
         self.file_path = f'{ELECTION_DATA_PATH}/european_elections_2019_results_by_polling_station.csv'
         self.data = self.load()
+        self.party_orientation = PoliticalPartyOrientation()
 
     def load(self):
         data = pd.read_csv(self.file_path, low_memory=False)
