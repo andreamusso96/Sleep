@@ -4,25 +4,10 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from DataInterface.ElectionDataInterface import ElectionData
+from DataInterface.ElectionDataInterface import ElectionData, ElectionFeatureName, Party
 from DataInterface.GeoDataInterface import GeoData, GeoDataType
 from FeatureExtraction.Feature import Feature
 from FeatureExtraction.FeatureCalculator import FeatureCalculator
-
-
-class ElectionFeatureName(Enum):
-    ENTROPY = 'entropy'
-    SIMPSON = 'simpson'
-    TURNOUT = 'turnout'
-    POLARIZATION = 'polarization'
-    PARTY_VOTES = 'party_votes'
-
-
-class Party(Enum):
-    FRANCE_INSOUMISE = 1
-    RENAISSANCE = 5
-    ECOLOGIE = 30
-    LEPEN = 23
 
 
 class ElectionFeatureCalculator(FeatureCalculator):
@@ -50,7 +35,7 @@ class ElectionFeatureCalculator(FeatureCalculator):
             raise NotImplementedError
 
     def get_election_result_by_iris(self, subset: List[str]) -> pd.DataFrame:
-        table_results_polling_station_by_list_num = self.election_data.get_election_data_table(column='list_number', value='pct_votes_to_list_among_votes')
+        table_results_polling_station_by_list_num = self.election_data.get_election_data_table(column='list_number', value='pct_votes_to_list_among_votes') / 100
         table_results_iris_by_list_num = self._aggregate_to_iris_level(polling_station_level_data=table_results_polling_station_by_list_num, subset=subset, agg_function='mean')
         return table_results_iris_by_list_num
 
@@ -72,7 +57,7 @@ class ElectionFeatureCalculator(FeatureCalculator):
     def get_votes_for_party_by_iris(self, subset: List[str], party: Party) -> Feature:
         votes_for_party = self.election_data.get_votes_for_list(list_number=party.value) / 100
         votes_for_party_by_iris = self._aggregate_to_iris_level(polling_station_level_data=votes_for_party, subset=subset, agg_function='mean')
-        votes_for_party = Feature(data=votes_for_party_by_iris.rename(columns={'pct_votes_to_list_among_votes': self.election_data.get_list_name(list_number=party.value)}), name=self.election_data.get_list_name(list_number=party.value))
+        votes_for_party = Feature(data=votes_for_party_by_iris.rename(columns={'pct_votes_to_list_among_votes': party.value}), name=party.value)
         return votes_for_party
 
     def _aggregate_to_iris_level(self, polling_station_level_data: pd.DataFrame, subset: List[str], agg_function: str):

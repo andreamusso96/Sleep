@@ -5,6 +5,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 from FeatureSelection.Regression import Regression
+from FeatureSelection.Controls import Control
 
 
 class MultiRegressionPlotLayoutParameters:
@@ -85,7 +86,7 @@ class AxisManager:
 
 
 class RegressionSubplot:
-    def __init__(self, regression, controls, xtitle, ytitle):
+    def __init__(self, regression: Regression, controls: List[Control], xtitle: str, ytitle: str):
         self.regression = regression
         self.controls = controls
         self.xtitle = xtitle
@@ -94,11 +95,14 @@ class RegressionSubplot:
         self.col = None
 
     def add_subplot(self, fig: go.Figure, axis_manager: AxisManager, colors: Dict[str, str]) -> Dict[str, Any]:
-        trace_bar_chart_inset, trace_scatter, trace_regression_line = self.regression.scatter_plot_with_controls(controls=self.controls, cumulative=True, axis_number=axis_manager.inset_axis_number(row=self.row, col=self.col), colors=colors, show=False)
-        fig.add_trace(trace_scatter, row=self.row, col=self.col)
-        fig.add_trace(trace_regression_line, row=self.row, col=self.col)
-        fig.add_trace(trace_bar_chart_inset)
-        axis_layout = self._subplot_axis_layout(axis_manager=axis_manager, row=self.row, col=self.col, xtitle=self.xtitle, ytitle=self.ytitle)
+        raise NotImplementedError
+
+    def _add_subplot(self, fig: go.Figure, axis_manager: AxisManager, trace_main1, trace_main2, trace_inset) -> Dict[str, Any]:
+        fig.add_trace(trace_main1, row=self.row, col=self.col)
+        fig.add_trace(trace_main2, row=self.row, col=self.col)
+        fig.add_trace(trace_inset)
+        axis_layout = self._subplot_axis_layout(axis_manager=axis_manager, row=self.row, col=self.col,
+                                                xtitle=self.xtitle, ytitle=self.ytitle)
         return axis_layout
 
     @staticmethod
@@ -106,12 +110,36 @@ class RegressionSubplot:
         main_axis_number = axis_manager.main_axis_number(row=row, col=col)
         inset_axis_number = axis_manager.inset_axis_number(row=row, col=col)
         xaxis_main = axis_manager.axis(inset=False, row=row, col=col, title=xtitle, showline=True)
-        yaxis_main = axis_manager.axis(inset=False, row=row, col=col, title=ytitle, nticks=5, showline=True if col == 1 else False)
+        yaxis_main = axis_manager.axis(inset=False, row=row, col=col, title=ytitle if col == 1 else '', nticks=5, showline=True if col == 1 else False)
         xaxis_inset = axis_manager.axis(inset=True, row=row, col=col, is_xaxis=True, title=' ')
         yaxis_inset = axis_manager.axis(inset=True, row=row, col=col, is_xaxis=False, title='Effect', nticks=3, side='left')
         axis_layout = {f'xaxis{main_axis_number}': xaxis_main, f'yaxis{main_axis_number}': yaxis_main,
                        f'xaxis{inset_axis_number}': xaxis_inset, f'yaxis{inset_axis_number}': yaxis_inset}
         return axis_layout
+
+
+class RegressionSubplotScatter(RegressionSubplot):
+    def __init__(self, regression: Regression, controls: List[Control], xtitle: str, ytitle: str):
+        super().__init__(regression=regression, controls=controls, xtitle=xtitle, ytitle=ytitle)
+
+    def add_subplot(self, fig: go.Figure, axis_manager: AxisManager, colors: Dict[str, str]) -> Dict[str, Any]:
+        trace_bar_chart_inset, trace_scatter, trace_regression_line = self.regression.scatter_plot_with_controls(
+            controls=self.controls, colors=colors,
+            axis_number=axis_manager.inset_axis_number(row=self.row, col=self.col), show=False)
+        return self._add_subplot(fig=fig, axis_manager=axis_manager, trace_main1=trace_scatter,
+                                 trace_main2=trace_regression_line, trace_inset=trace_bar_chart_inset)
+
+
+class RegressionSubplotHeatmap(RegressionSubplot):
+    def __init__(self, regression: Regression, controls: List[Control], xtitle: str, ytitle: str):
+        super().__init__(regression=regression, controls=controls, xtitle=xtitle, ytitle=ytitle)
+
+    def add_subplot(self, fig: go.Figure, axis_manager: AxisManager, colors: Dict[str, str]) -> Dict[str, Any]:
+        trace_bar_chart_inset, trace_heatmap, trace_mean_outcome_line = self.regression.heatmap_plot_with_controls(
+            controls=self.controls, colors=colors,
+            axis_number=axis_manager.inset_axis_number(row=self.row, col=self.col), show=False)
+        return self._add_subplot(fig=fig, axis_manager=axis_manager, trace_main1=trace_heatmap,
+                                 trace_main2=trace_mean_outcome_line, trace_inset=trace_bar_chart_inset)
 
 
 class MultiRegressionPlot:
@@ -150,17 +178,23 @@ class MultiRegressionPlot:
 
     def _figure_layout(self, subplot_axis_layouts):
         self._add_legend()
+        self._add_colorbar()
         layout = go.Layout(
             width=self.params.width,
             height=self.params.height,
             template=self.params.template,
             font=dict(size=self.params.font_size, color='black'),
             showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=self.params.legend_y, xanchor="left", x=self.params.legend_x),
+            legend=dict(orientation="h", yanchor="bottom", y=self.params.legend_y, xanchor="left",
+                        x=self.params.legend_x),
             **subplot_axis_layouts)
         self.fig.update_layout(layout)
 
     def _add_legend(self):
         for i, name in enumerate(self.params.inset_bar_legend_names):
             self.fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers', marker=dict(size=10, color=list(self.params.inset_bar_colors.values())[i]), showlegend=True, name=name), row=1, col=1)
+
+    def _add_colorbar(self):
+        colorbar_trace = go.Scatter(x=[None], y=[None], mode='markers', marker=dict(colorscale='Greys', showscale=True, cmin=0, cmax=1, colorbar=dict(thickness=10, tickvals=[0, 1], ticktext=['Low', 'High'], outlinewidth=0, orientation='v')), showlegend=False)
+        self.fig.add_trace(colorbar_trace, row=1, col=1)
 

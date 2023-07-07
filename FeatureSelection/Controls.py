@@ -3,6 +3,10 @@ class Control:
         self.name = name
         self.var_names = var_names
 
+    def join(self, other):
+        return Control(name=f"{self.name} + {other.name}", var_names=self.var_names + other.var_names)
+
+
 class NoControl(Control):
     def __init__(self):
         super().__init__(name='no_control', var_names=[])

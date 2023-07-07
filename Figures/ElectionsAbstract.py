@@ -3,16 +3,159 @@ import geopandas as gpd
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 
 from DataInterface.GeoDataInterface import GeoData, GeoDataType
 from DataInterface.AdminDataInterface import AdminData
-from DataInterface.ElectionDataInterface import ElectionData
-from FeatureExtraction.ElectionFeatureCalculator import ElectionFeatureCalculator, ElectionFeatureName, Party
+from DataInterface.ElectionDataInterface import ElectionData, ElectionFeatureName, Party
+from FeatureExtraction.ElectionFeatureCalculator import ElectionFeatureCalculator
 from FeatureExtraction.ServiceConsumptionFeatureCalculator import ServiceConsumptionFeatureCalculator
 from FeatureExtraction.ServiceConsumption.ServiceConsumption import ServiceConsumption
+from FeatureExtraction.IrisFeatureCalculator import IrisFeatureCalculator
 from FeatureExtraction.Feature import Feature
+from FeatureSelection.Controls import NoControl, AgeControl, IncomeControl, EducationControl
+from FeatureSelection.MultiRegressionPlotter import MultiRegressionPlotLayoutParameters, RegressionSubplotScatter, RegressionSubplotHeatmap, MultiRegressionPlot
+from FeatureSelection.Regression import Regression
 from config import FIGURE_PATH
+
+def log(df: pd.DataFrame):
+    vals = df.values
+    vals = np.log(vals, out=np.zeros_like(vals), where=(vals != 0))
+    return pd.DataFrame(vals, index=df.index, columns=df.columns)
+
+
+class ElectionAbstractRegressionData:
+    def __init__(self, geo_data: GeoData, admin_data: AdminData, election_data: ElectionData, service_consumption: ServiceConsumption):
+        self.election_feature_calculator = ElectionFeatureCalculator(election_data=election_data, geo_data=geo_data)
+        self.service_consumption_feature_calculator = ServiceConsumptionFeatureCalculator(service_consumption=service_consumption, admin_data=admin_data)
+        self.iris_feature_calculator = IrisFeatureCalculator(geo_data=geo_data, admin_data=admin_data)
+        self.iris_subset = service_consumption.data.index
+        self.geo_data = geo_data
+        self.admin_data = admin_data
+        self.election_data = election_data
+        self.service_consumption = service_consumption
+        self.service_subset = ['Facebook', 'Wikipedia', 'LinkedIn', 'Fortnite', 'Netflix']
+
+    def get_regression_data(self):
+        consumption_shares = self._consumption_shares()[self.service_subset].copy()
+        data = pd.merge(consumption_shares, self._polarization(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._turnout(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._entropy(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._vote_far_right(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._vote_far_left(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._vote_establishment(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._age_controls(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._income_controls(), left_index=True, right_index=True, how='inner')
+        data = pd.merge(data, self._education_controls(), left_index=True, right_index=True, how='inner')
+        data = log(data)
+        data.dropna(inplace=True)
+        return data
+
+    def _consumption_shares(self):
+        consumption_shares = (self.service_consumption.data.T / self.service_consumption.data.sum(axis=1)).T
+        consumption_shares = consumption_shares.loc[self.iris_subset].copy()
+        return consumption_shares
+
+    def _entropy(self):
+        entropy = self.election_feature_calculator.get_election_feature(feature=ElectionFeatureName.ENTROPY,
+                                                                        subset=self.iris_subset).data
+        return entropy
+
+    def _polarization(self):
+        polarization = self.election_feature_calculator.get_election_feature(feature=ElectionFeatureName.POLARIZATION,
+                                                                             subset=self.iris_subset).data
+        return polarization
+
+    def _turnout(self):
+        turnout = self.election_feature_calculator.get_election_feature(feature=ElectionFeatureName.TURNOUT,
+                                                                        subset=self.iris_subset).data
+        return turnout
+
+    def _vote_far_left(self):
+        far_left = self.election_feature_calculator.get_votes_for_party_by_iris(subset=self.iris_subset,
+                                                                                party=Party.FRANCE_INSOUMISE).data
+        return far_left
+
+    def _vote_far_right(self):
+        far_right = self.election_feature_calculator.get_votes_for_party_by_iris(subset=self.iris_subset,
+                                                                                 party=Party.LEPEN).data
+        return far_right
+
+    def _vote_establishment(self):
+        establishment = self.election_feature_calculator.get_votes_for_party_by_iris(subset=self.iris_subset,
+                                                                                     party=Party.RENAISSANCE).data
+        return establishment
+
+    def _age_controls(self):
+        age = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=AgeControl().var_names)
+        return age
+
+    def _income_controls(self):
+        income = self.admin_data.get_admin_data(subset=self.iris_subset)[IncomeControl().var_names]
+        return income
+
+    def _education_controls(self):
+        education = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=EducationControl().var_names)
+        return education
+
+
+class ElectionAbstractFigure:
+    def __init__(self, data: pd.DataFrame, scatter: bool = True):
+        self.data = data
+        self.layout_parameters = self._get_layout_parameters()
+        self.scatter = scatter
+        self.save_path = f'{FIGURE_PATH}/election_correlations_scatter.pdf'
+
+    def show(self, save: bool = False, scatter: bool = True):
+        regression_subplot_class = RegressionSubplotScatter if scatter else RegressionSubplotHeatmap
+        regression_subplots = self._get_regression_subplots(regression_subplot_class=regression_subplot_class)
+        multi_regression_plot = MultiRegressionPlot(regression_subplots=regression_subplots, layout_parameters=self.layout_parameters)
+        fig = multi_regression_plot.plot()
+        if save:
+            fig.write_image(self.save_path)
+        return fig
+
+    def _get_base_controls(self):
+        controls = [NoControl(), AgeControl(), AgeControl().join(EducationControl()),
+                    AgeControl().join(EducationControl()).join(IncomeControl())]
+        return controls
+
+    def _get_regressions(self):
+        treatments = ['Facebook', 'Wikipedia', 'LinkedIn', 'Fortnite', 'Netflix']
+        outcomes = ['entropy', 'polarization', 'turnout', Party.FRANCE_INSOUMISE.value, Party.LEPEN.value, Party.RENAISSANCE.value]
+        regressions = []
+        for outcome in outcomes:
+            for treatment in treatments:
+                regression = Regression(data=self.data, treatment=treatment, outcome=outcome)
+                regressions.append(regression)
+        return regressions
+
+    def _get_regression_subplots(self, regression_subplot_class):
+        map_treatment_to_xtitle = {'Facebook': 'log(Facebook)', 'Wikipedia': 'log(Wikipedia)', 'LinkedIn': 'log(LinkedIn)', 'Fortnite': 'log(Fortnite)', 'Netflix': 'log(Netflix)'}
+        map_outcome_to_ytitle = {'entropy': 'log(Entropy)', 'polarization': 'log(Polarization)', 'turnout': 'log(Turnout)', Party.FRANCE_INSOUMISE.value: 'log(Votes Far Left)', Party.LEPEN.value: 'log(Votes Far Right)', Party.RENAISSANCE.value: 'log(Votes Establishment)'}
+        controls = self._get_base_controls()
+        regression_subplots = []
+        regressions = self._get_regressions()
+        for regression in regressions:
+            regression_subplot = regression_subplot_class(regression=regression, controls=controls, xtitle=map_treatment_to_xtitle[regression.treatment], ytitle=map_outcome_to_ytitle[regression.outcome])
+            regression_subplots.append(regression_subplot)
+        return regression_subplots
+
+    def _get_layout_parameters(self):
+        controls = self._get_base_controls()
+        inset_bar_legend_names = ['No Controls', 'Age', 'Age + Edu', 'Age + Edu + Inc']
+        colors = px.colors.qualitative.Plotly[:len(inset_bar_legend_names)]
+        inset_bar_colors = {control.name: colors[i] for i, control in enumerate(controls)}
+        nrows, ncols = 6, 5
+        layout_params = MultiRegressionPlotLayoutParameters(nrows=nrows, ncols=ncols, width=ncols * 400, height=nrows * 400, vertical_spacing=0.03,
+                                                            horizontal_spacing=0.02, font_size=21, line_width=3,
+                                                            template='plotly_white',
+                                                            inset_font_size=18, inset_line_width=2,
+                                                            inset_bar_legend_names=inset_bar_legend_names,
+                                                            inset_bar_colors=inset_bar_colors,
+                                                            inset_size_x=0.05, inset_size_y=0.03, inset_shift_x=0.01,
+                                                            inset_shift_y=0.01, legend_x=-0.05, legend_y=1.01, skip=[])
+        return layout_params
 
 
 class FigureElectionsAbstract:

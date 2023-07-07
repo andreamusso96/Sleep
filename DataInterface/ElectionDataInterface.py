@@ -1,10 +1,26 @@
 from typing import List
+from enum import Enum
 
 import pandas as pd
 
 from DataPreprocessing.ElectionData.Data import ElectionDataComplete
 from DataInterface.DataInterface import DataInterface
 from DataInterface.GeoDataInterface import GeoData, GeoDataType
+
+
+class ElectionFeatureName(Enum):
+    ENTROPY = 'entropy'
+    SIMPSON = 'simpson'
+    TURNOUT = 'turnout'
+    POLARIZATION = 'polarization'
+    PARTY_VOTES = 'party_votes'
+
+
+class Party(Enum):
+    FRANCE_INSOUMISE = 1
+    RENAISSANCE = 5
+    ECOLOGIE = 30
+    LEPEN = 23
 
 
 class ElectionData(DataInterface):
