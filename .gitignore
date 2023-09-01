@@ -174,7 +174,6 @@ poetry.toml
 pyrightconfig.json
 
 # My configurations
-data/
 batch_file.txt
 .DS_Store
 Consulting/

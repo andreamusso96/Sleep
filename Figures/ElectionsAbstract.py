@@ -16,12 +16,37 @@ from FeatureExtraction.Feature import Feature
 from FeatureSelection.Controls import NoControl, AgeControl, IncomeControl, EducationControl
 from FeatureSelection.MultiRegressionPlotter import MultiRegressionPlotLayoutParameters, RegressionSubplotScatter, RegressionSubplotHeatmap, MultiRegressionPlot
 from FeatureSelection.Regression import Regression
+from Utils import City
 from config import FIGURE_PATH
+
 
 def log(df: pd.DataFrame):
     vals = df.values
     vals = np.log(vals, out=np.zeros_like(vals), where=(vals != 0))
     return pd.DataFrame(vals, index=df.index, columns=df.columns)
+
+
+class CityMap:
+    def __init__(self, feature: Feature, geo_data: GeoData, city: City):
+        self.feature = feature
+        self.geo_data = geo_data
+        self.city = city
+        self._normalized_feature_with_geo_data = self._normalized_feature_with_geo_data()
+
+    def make_map(self, save: bool = False):
+        fig, ax = plt.subplots(figsize=(10, 10))
+        self._normalized_feature_with_geo_data.plot(column=self.feature.name, ax=ax, legend=False, figsize=(10, 10), cmap='Greys')
+        ax.set_axis_off()
+        fig.savefig(f'{FIGURE_PATH}/map_{self.feature.name}_{self.city.value}.pdf', bbox_inches='tight')
+
+    def _normalized_feature_with_geo_data(self) -> gpd.GeoDataFrame:
+        iris_subset_feature = self.feature.data.index
+        iris_geo_data = self.geo_data.get_geo_data(geometry=GeoDataType.IRIS, subset=iris_subset_feature, other_geo_data_types=[GeoDataType.CITY]).set_index(GeoDataType.IRIS.value)
+        iris_subset = list(set(iris_geo_data[iris_geo_data[GeoDataType.CITY.value] == self.city.value].index).intersection(set(iris_subset_feature)))
+        feature_with_geo_data = gpd.GeoDataFrame(self.feature.data.merge(iris_geo_data, left_index=True, right_index=True))[['geometry', self.feature.name]].loc[iris_subset]
+        feature_with_geo_data[self.feature.name] = StandardScaler().fit_transform(feature_with_geo_data[self.feature.name].values.reshape(-1, 1))
+        feature_with_geo_data = feature_with_geo_data[feature_with_geo_data[self.feature.name].abs() < 3]
+        return feature_with_geo_data
 
 
 class ElectionAbstractRegressionData:
@@ -121,8 +146,8 @@ class ElectionAbstractFigure:
         return controls
 
     def _get_regressions(self):
-        treatments = ['Facebook', 'Wikipedia', 'LinkedIn', 'Fortnite', 'Netflix']
-        outcomes = ['entropy', 'polarization', 'turnout', Party.FRANCE_INSOUMISE.value, Party.LEPEN.value, Party.RENAISSANCE.value]
+        treatments = ['Facebook', 'Wikipedia', 'LinkedIn', 'Fortnite']
+        outcomes = ['polarization'] # ['entropy', 'polarization', 'turnout', Party.FRANCE_INSOUMISE.value, Party.LEPEN.value, Party.RENAISSANCE.value]
         regressions = []
         for outcome in outcomes:
             for treatment in treatments:
@@ -131,7 +156,7 @@ class ElectionAbstractFigure:
         return regressions
 
     def _get_regression_subplots(self, regression_subplot_class):
-        map_treatment_to_xtitle = {'Facebook': 'log(Facebook)', 'Wikipedia': 'log(Wikipedia)', 'LinkedIn': 'log(LinkedIn)', 'Fortnite': 'log(Fortnite)', 'Netflix': 'log(Netflix)'}
+        map_treatment_to_xtitle = {'Facebook': 'log(Facebook Share)', 'Wikipedia': 'log(Wikipedia Share)', 'LinkedIn': 'log(LinkedIn Share)', 'Fortnite': 'log(Fortnite Share)', 'Netflix': 'log(Netflix Share)'}
         map_outcome_to_ytitle = {'entropy': 'log(Entropy)', 'polarization': 'log(Polarization)', 'turnout': 'log(Turnout)', Party.FRANCE_INSOUMISE.value: 'log(Votes Far Left)', Party.LEPEN.value: 'log(Votes Far Right)', Party.RENAISSANCE.value: 'log(Votes Establishment)'}
         controls = self._get_base_controls()
         regression_subplots = []
@@ -146,15 +171,15 @@ class ElectionAbstractFigure:
         inset_bar_legend_names = ['No Controls', 'Age', 'Age + Edu', 'Age + Edu + Inc']
         colors = px.colors.qualitative.Plotly[:len(inset_bar_legend_names)]
         inset_bar_colors = {control.name: colors[i] for i, control in enumerate(controls)}
-        nrows, ncols = 6, 5
-        layout_params = MultiRegressionPlotLayoutParameters(nrows=nrows, ncols=ncols, width=ncols * 400, height=nrows * 400, vertical_spacing=0.03,
+        nrows, ncols = 2, 3
+        layout_params = MultiRegressionPlotLayoutParameters(nrows=nrows, ncols=ncols, width=ncols * 400, height=nrows * 400, vertical_spacing=0.1,
                                                             horizontal_spacing=0.02, font_size=21, line_width=3,
                                                             template='plotly_white',
                                                             inset_font_size=18, inset_line_width=2,
                                                             inset_bar_legend_names=inset_bar_legend_names,
                                                             inset_bar_colors=inset_bar_colors,
-                                                            inset_size_x=0.05, inset_size_y=0.03, inset_shift_x=0.01,
-                                                            inset_shift_y=0.01, legend_x=-0.05, legend_y=1.01, skip=[])
+                                                            inset_size_x=0.1, inset_size_y=0.1, inset_shift_x=0.01,
+                                                            inset_shift_y=0.03, legend_x=-0.05, legend_y=1.01, skip=[(1, 3), (2, 3)])
         return layout_params
 
 

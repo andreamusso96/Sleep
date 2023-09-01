@@ -27,7 +27,7 @@ class SleepAbstractRegressionData:
         self.iris_subset = self.session_expectation.data.index
 
     def get_regression_data(self):
-        data = pd.merge(log(self._insomnia_index()), log(self._density()), left_index=True, right_index=True, how='inner')
+        data = pd.merge(self._insomnia_index(), log(self._density()), left_index=True, right_index=True, how='inner')
         data = pd.merge(data, log(self._amenity_index()), left_index=True, right_index=True, how='inner')
         data = pd.merge(data, log(self._transportation_index()), left_index=True, right_index=True, how='inner')
         data = pd.merge(data, log(self._age_controls()), left_index=True, right_index=True, how='inner')
@@ -50,19 +50,19 @@ class SleepAbstractRegressionData:
         equip_names = [c for c in equip_names if
                        c.split('_')[1] in services + shops + schools + health_care + free_time + tourism]
         amenity_index = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=equip_names,
-                                                                 coarsened_equip=coarsened_equip).sum(axis=1).to_frame('Amenity Index')
+                                                                 coarsened_equip=coarsened_equip).sum(axis=1).to_frame('Amenity Index') * 10**6
         return amenity_index
 
     def _density(self):
-        density = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=['P19_POP']).rename(columns={'P19_POP': 'Density'})
+        density = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=['P19_POP']).rename(columns={'P19_POP': 'Density'}) * 10**6
         return density
 
     def _transportation_index(self):
-        transportation = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=['EQUIP_E1'], coarsened_equip=True).rename(columns={'EQUIP_E1': 'Transportation Index'})
+        transportation = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=['EQUIP_E1'], coarsened_equip=True).rename(columns={'EQUIP_E1': 'Transportation Index'}) * 10**6
         return transportation
 
     def _insomnia_index(self):
-        insomnia_index = self.session_expectation.data.rename(columns={'session_expectation': 'Insomnia Index'})['Insomnia Index'].to_frame()
+        insomnia_index = self.session_expectation.data.rename(columns={'session_expectation': 'Insomnia Index'})['Insomnia Index'].to_frame() * 15
         return insomnia_index
 
     def _age_controls(self):
@@ -74,7 +74,7 @@ class SleepAbstractRegressionData:
         return income
 
     def _education_controls(self):
-        education = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=EducationControl().var_names)
+        education = self.iris_feature_calculator.var_density(subset=self.iris_subset, var_names=EducationControl().var_names) * 10**6
         return education
 
 
@@ -106,8 +106,8 @@ class SleepAbstractFigure:
         return regressions
 
     def _get_regression_subplots(self, regression_subplot_class):
-        map_treatment_to_xtitle = {'Density': 'log(Density)', 'Transportation Index': 'log(Transportation Index)', 'Amenity Index': 'log(Amenity Index)', 'DEC_MED19': 'log(Median Income)', 'P19_ACT_DIPLMIN': 'log(Density HS Graduates)'}
-        map_outcome_to_ytitle = {'Insomnia Index': 'log(Insomnia Index)'}
+        map_treatment_to_xtitle = {'Density': 'log(Population Density)', 'Transportation Index': 'log(Transportation Density)', 'Amenity Index': 'log(Amenity Density)', 'DEC_MED19': 'log(Median Income)', 'P19_ACT_DIPLMIN': 'log(HS Graduate Density)'}
+        map_outcome_to_ytitle = {'Insomnia Index': 'Insomnia Index'}
         controls = self._get_all_controls()
         controls_to_skip = [[3], [3], [3], [3, 4], [2, 4]]
         regressions = self._get_regressions()
@@ -122,9 +122,9 @@ class SleepAbstractFigure:
     def _get_layout_parameters(self):
         controls = self._get_all_controls()
         inset_bar_legend_names = ['No Controls', 'Age', 'Age + Edu', 'Age + Inc', 'Age + Edu + Inc']
-        colors = px.colors.qualitative.Plotly[:len(inset_bar_legend_names)]
+        colors = [px.colors.qualitative.Plotly[0]] + px.colors.qualitative.Plotly[2:len(inset_bar_legend_names)+1]
         inset_bar_colors = {control.name: colors[i] for i, control in enumerate(controls)}
-        layout_params = MultiRegressionPlotLayoutParameters(nrows=2, ncols=3, width=1200, height=800, vertical_spacing=0.1,
+        layout_params = MultiRegressionPlotLayoutParameters(nrows=2, ncols=3, width=1200, height=800, vertical_spacing=0.12,
                                                             horizontal_spacing=0.03, font_size=21, line_width=3,
                                                             template='plotly_white',
                                                             inset_font_size=18, inset_line_width=2,

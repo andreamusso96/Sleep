@@ -117,7 +117,7 @@ class RegressionPlotter:
         mean = mean.loc[mask_enough_obs]
         conf_int = conf_int.loc[mask_enough_obs]
         error_y = dict(type='data', array=conf_int, visible=True)
-        trace_mean = go.Scatter(x=mean.index, y=mean.values, error_y=error_y, mode='lines', line=dict(color='rgb(255, 0, 255)', width=4), showlegend=False)
+        trace_mean = go.Scatter(x=mean.index, y=mean.values, error_y=error_y, mode='lines', line=dict(color=px.colors.qualitative.Plotly[1], width=4), showlegend=False)
         return trace_mean
 
     def _bin_data(self, bins: int):
