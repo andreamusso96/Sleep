@@ -1,15 +1,14 @@
 import pandas as pd
-import Data.geo_france as gf
 
 from . import config
 
 
-def save_admin_data():
+def save_preprocessed_admin_data():
     admin_data = generate_admin_data()
     admin_data.to_csv(config.get_data_file_path(), index=True)
 
 
-def save_admin_metadata():
+def save_preprocessed_admin_metadata():
     admin_metadata = generate_admin_metadata()
     admin_metadata.to_csv(config.get_metadata_file_path(), index=False)
 
@@ -33,9 +32,9 @@ def merge_insee_datasets(dataset1: pd.DataFrame, dataset2: pd.DataFrame) -> pd.D
 
 
 def format_equipment_counts_data_for_merge(data: pd.DataFrame) -> pd.DataFrame:
-    data = data.pivot(index=gf.GeoDataType.IRIS.value, columns='TYPEQU', values='NB_EQUIP').fillna(0).reset_index()
-    data.rename(columns={col: f'EQUIP_{col}' for col in data.columns if col != gf.GeoDataType.IRIS.value}, inplace=True)
-    data.set_index(gf.GeoDataType.IRIS.value, inplace=True)
+    data = data.pivot(index='iris', columns='TYPEQU', values='NB_EQUIP').fillna(0).reset_index()
+    data.rename(columns={col: f'EQUIP_{col}' for col in data.columns if col != 'iris'}, inplace=True)
+    data.set_index('iris', inplace=True)
     data.sort_index(inplace=True)
     return data
 
@@ -67,28 +66,28 @@ def load_insee_metadata_file(file_name: config.INSEEDataFileName) -> pd.DataFram
 
 def preprocess_insee_data_file(file_name: config.INSEEDataFileName, year: int) -> pd.DataFrame:
     data = read_insee_data_file(file_name=file_name, year=year, sep=';', dtype={'IRIS': str}, low_memory=False)
-    data.rename(columns={'IRIS': gf.GeoDataType.IRIS.value}, inplace=True)
+    data.rename(columns={'IRIS': 'iris'}, inplace=True)
     data.drop(columns=['COM', 'LAB_IRIS', 'MODIF_IRIS'], inplace=True)
-    data.sort_values(by=gf.GeoDataType.IRIS.value, inplace=True)
-    data.set_index(gf.GeoDataType.IRIS.value, inplace=True)
+    data.sort_values(by='iris', inplace=True)
+    data.set_index('iris', inplace=True)
     return data
 
 
 def preprocess_equipment_counts_data_file(year: int) -> pd.DataFrame:
     columns_to_keep = ['DCIRIS', 'DOM', 'SDOM', 'TYPEQU', 'NB_EQUIP']
     data = read_insee_data_file(file_name=config.INSEEDataFileName.EQUIPMENT_COUNTS, year=year, sep=';', dtype={'DCIRIS': str}, usecols=columns_to_keep)
-    data.rename(columns={'DCIRIS': gf.GeoDataType.IRIS.value}, inplace=True)
-    data = data.groupby(by=[gf.GeoDataType.IRIS.value, 'TYPEQU']).sum().reset_index()
-    data.sort_values(by=gf.GeoDataType.IRIS.value, inplace=True)
+    data.rename(columns={'DCIRIS': 'iris'}, inplace=True)
+    data = data.groupby(by=['iris', 'TYPEQU']).sum().reset_index()
+    data.sort_values(by='iris', inplace=True)
     return data
 
 
 def preprocess_income_data_file(year: int) -> pd.DataFrame:
     data = read_insee_data_file(file_name=config.INSEEDataFileName.INCOME, year=year, sep=',', dtype={'IRIS': str}, low_memory=False)
-    data.rename(columns={'IRIS': gf.GeoDataType.IRIS.value}, inplace=True)
-    data[gf.GeoDataType.IRIS.value] = data[gf.GeoDataType.IRIS.value].apply(lambda x: str(x).zfill(9))
-    data.sort_values(by=gf.GeoDataType.IRIS.value, inplace=True)
-    data.set_index(gf.GeoDataType.IRIS.value, inplace=True)
+    data.rename(columns={'IRIS': 'iris'}, inplace=True)
+    data['iris'] = data['iris'].apply(lambda x: str(x).zfill(9))
+    data.sort_values(by='iris', inplace=True)
+    data.set_index('iris', inplace=True)
     return data
 
 

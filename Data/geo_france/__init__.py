@@ -1,1 +1,1 @@
-from . data import GeoDataType
+from . interface import GeoDataType

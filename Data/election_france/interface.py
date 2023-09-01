@@ -2,7 +2,7 @@ from enum import Enum
 
 import Data.geo_france as gf
 
-from . import data
+from .data import data
 
 
 class Party(Enum):

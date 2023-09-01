@@ -3,13 +3,12 @@ import pandas as pd
 from . import config
 
 
-# Lazy loading
 class Data:
     def __init__(self):
         self._data = None
 
     def load_data(self):
-        self._data = pd.read_csv(config.get_data_file_path(), dtype={'polling_station': str}, low_memory=False)
+        self._data = pd.read_csv(config.get_data_file_path(), dtype={'polling_station': str})
         self._data.set_index('polling_station', inplace=True)
 
     @property

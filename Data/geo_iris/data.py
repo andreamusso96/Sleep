@@ -1,6 +1,7 @@
 import pandas as pd
 
 from . import config
+from . import preprocessing
 
 
 # Lazy loading
@@ -9,8 +10,7 @@ class Data:
         self._data = None
 
     def load_data(self):
-        self._data = pd.read_csv(config.get_data_file_path(), dtype={'polling_station': str}, low_memory=False)
-        self._data.set_index('polling_station', inplace=True)
+        self._data = preprocessing.load_iris_geo_data()
 
     @property
     def data(self) -> pd.DataFrame:

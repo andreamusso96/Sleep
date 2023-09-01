@@ -3,8 +3,7 @@ import pandas as pd
 from . import config
 
 
-# Lazy loading
-class _DataLoader:
+class Data:
     def __init__(self):
         self._data = None
         self._metadata = None
@@ -16,18 +15,16 @@ class _DataLoader:
         self._metadata = pd.read_csv(config.get_metadata_file_path())
 
     @property
-    def data(self):
+    def data(self) -> pd.DataFrame:
         if self._data is None:
             self.load_data()
         return self._data
 
     @property
-    def metadata(self):
+    def metadata(self) -> pd.DataFrame:
         if self._metadata is None:
             self.load_metadata()
         return self._metadata
 
 
-_data_loader = _DataLoader()
-data = _data_loader.data
-metadata = _data_loader.metadata
+data = Data()

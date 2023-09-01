@@ -1,12 +1,11 @@
 import pandas as pd
-import Data.geo_france as gf
 
 from . import config
 
 
-def save_election_data():
+def save_preprocessed_election_data():
     election_data = preprocess_election_data()
-    election_data.to_csv(config.get_data_file(), index=False)
+    election_data.to_csv(config.get_data_file_path(), index=False)
 
 
 def preprocess_election_data():
@@ -16,13 +15,13 @@ def preprocess_election_data():
     data = set_parent_municipality_code(data=data)
     data = set_polling_station_code(data=data)
     data = drop_redundant_geo_information(data=data)
-    data.sort_values(by=gf.GeoDataType.POLLING_STATION.value, inplace=True)
+    data.sort_values(by='polling_station', inplace=True)
     data.reset_index(drop=True, inplace=True)
     return data
 
 
 def read_election_data() -> pd.DataFrame:
-    file_path = config.get_raw_data_file()
+    file_path = config.get_raw_data_file_path()
     data = pd.read_csv(file_path, low_memory=False, index_col=0)
     return data
 
@@ -82,7 +81,7 @@ def set_parent_municipality_code(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def set_polling_station_code(data: pd.DataFrame) -> pd.DataFrame:
-    data[gf.GeoDataType.POLLING_STATION.value] = data['parent_municipality_code'] + data['polling_station_code']
+    data['polling_station'] = data['parent_municipality_code'] + data['polling_station_code']
     return data
 
 
