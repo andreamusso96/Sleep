@@ -1,5 +1,4 @@
-import Data.admin_france as af
+import Data.election_france as ef
 
 if __name__ == '__main__':
-    af.preprocessing.save_admin_data()
-    af.preprocessing.save_admin_metadata()
+    ef.preprocessing.save_election_data()

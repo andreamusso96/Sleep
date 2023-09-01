@@ -1,0 +1,1 @@
+from . interface import get_votes_for_party, Party

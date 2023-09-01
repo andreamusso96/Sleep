@@ -1,0 +1,1 @@
+from . interface import get_admin_data
