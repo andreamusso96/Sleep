@@ -1,7 +1,5 @@
 from enum import Enum
 
-import Data.geo_france as gf
-
 from .data import data
 
 
