@@ -9,7 +9,7 @@ class Data:
         self._metadata = None
 
     def load_data(self):
-        self._data = pd.read_csv(config.get_data_file_path(), index_col=0)
+        self._data = pd.read_csv(config.get_data_file_path(), index_col=0, low_memory=False)
 
     def load_metadata(self):
         self._metadata = pd.read_csv(config.get_metadata_file_path())

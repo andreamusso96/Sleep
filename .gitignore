@@ -178,5 +178,6 @@ batch_file.txt
 .DS_Store
 Consulting/
 temp/
+cache/
 
 # End of https://www.toptal.com/developers/gitignore/api/python

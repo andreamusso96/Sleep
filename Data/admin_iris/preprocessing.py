@@ -21,6 +21,7 @@ def generate_admin_data() -> pd.DataFrame:
     data = merge_insee_datasets(dataset1=data, dataset2=load_insee_data_file(file_name=config.INSEEDataFileName.EDUCATION))
     data = merge_insee_datasets(dataset1=data, dataset2=load_insee_data_file(file_name=config.INSEEDataFileName.HOUSING))
     data = merge_insee_datasets(dataset1=data, dataset2=load_insee_data_file(file_name=config.INSEEDataFileName.INCOME))
+    data = merge_insee_datasets(dataset1=data, dataset2=load_insee_data_file(file_name=config.INSEEDataFileName.POPULATION))
     data.sort_index(inplace=True)
     return data
 
@@ -47,7 +48,7 @@ def generate_admin_metadata() -> pd.DataFrame:
 
 
 def load_insee_data_file(file_name: config.INSEEDataFileName) -> pd.DataFrame:
-    if file_name in [config.INSEEDataFileName.OCCUPATION, config.INSEEDataFileName.COUPLES_FAMILIES_HOUSEHOLDS, config.INSEEDataFileName.EDUCATION, config.INSEEDataFileName.HOUSING]:
+    if file_name in [config.INSEEDataFileName.OCCUPATION, config.INSEEDataFileName.COUPLES_FAMILIES_HOUSEHOLDS, config.INSEEDataFileName.EDUCATION, config.INSEEDataFileName.HOUSING, config.INSEEDataFileName.POPULATION]:
         return preprocess_insee_data_file(file_name=file_name, year=2019)
     elif file_name == config.INSEEDataFileName.EQUIPMENT_COUNTS:
         return preprocess_equipment_counts_data_file(year=2021)
