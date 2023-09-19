@@ -14,6 +14,8 @@ class SessionDistribution:
         self.start = start
         self.end = end
         self.time_index = self.data.coords['time'].values
+        auxiliary_day = datetime(2020, 1, 1)
+        self.time_index_minutes = [d.time() for d in pd.date_range(start=datetime.combine(date=auxiliary_day, time=self.start), end=datetime.combine(date=auxiliary_day + timedelta(days=1), time=self.end), freq='1min')]
 
     def probability_of_session_by_time_and_location(self, subset_location: List[str] = None) -> pd.DataFrame:
         data = self.data.sel(iris=subset_location) if subset_location is not None else self.data
@@ -22,10 +24,21 @@ class SessionDistribution:
 
     def expected_time_of_session_by_location(self, subset_location: List[str] = None) -> pd.DataFrame:
         probability = self.probability_of_session_by_time_and_location(subset_location=subset_location)
-        expected_integer_time = probability.T.dot(np.arange(len(self.time_index)))
-        expected_time = expected_integer_time.apply(lambda x: self.time_index[int(np.round(x))])
-        expected_time = expected_time.to_frame(name='expected_time')
+        expected_time = probability.T.dot(np.arange(len(self.time_index))).to_frame(name='expected_time_number')
+        expected_time['expected_time'] = expected_time['expected_time_number'].apply(lambda x: self._float_to_time_in_minutes(float_time=x))
         return expected_time
+
+    def get_deviation_from_mean_of_session_cumulative_distribution_by_location(self):
+        probability_by_time_and_location = self.probability_of_session_by_time_and_location()
+        cumulative_distribution_across_time = probability_by_time_and_location.cumsum(axis=0)
+        mean_cumulative_distribution_across_time = cumulative_distribution_across_time.mean(axis=1)
+        deviation_from_mean = cumulative_distribution_across_time.subtrace(mean_cumulative_distribution_across_time, axis=0)
+        return deviation_from_mean
+
+    def _float_to_time_in_minutes(self, float_time: float) -> time:
+        multiplier = (len(self.time_index_minutes) - 1) / (len(self.time_index) - 1)
+        time_in_minutes = self.time_index_minutes[int(np.round(float_time * multiplier))]
+        return time_in_minutes
 
     def join(self, other: 'SessionDistribution') -> 'SessionDistribution':
         assert np.array_equal(self.time_index, other.time_index), 'SessionDistribution can only be joined if they have the same time index'
