@@ -32,7 +32,7 @@ class SessionDistribution:
         probability_by_time_and_location = self.probability_of_session_by_time_and_location()
         cumulative_distribution_across_time = probability_by_time_and_location.cumsum(axis=0)
         mean_cumulative_distribution_across_time = cumulative_distribution_across_time.mean(axis=1)
-        deviation_from_mean = cumulative_distribution_across_time.subtract(mean_cumulative_distribution_across_time, axis=0)
+        deviation_from_mean = -1 * cumulative_distribution_across_time.subtract(mean_cumulative_distribution_across_time, axis=0)
         deviation_from_mean = deviation_from_mean.sum(axis=0).to_frame(name='deviation_from_mean')
         return deviation_from_mean
 
