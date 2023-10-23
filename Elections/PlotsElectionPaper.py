@@ -22,15 +22,16 @@ def paris_map_plots():
     file_name = 'paris_map.geojson'
     data = gpd.read_file(f'{data_folder_path}/{file_name}')
 
-    plt.rcParams['font.size'] = 30
-    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['font.size'] = 28
+    plt.rcParams['font.family'] = 'Times New Roman'
     plt.rcParams['font.weight'] = 'medium'
     fig, axes = plt.subplots(2, 2, figsize=(20, 20), gridspec_kw={"width_ratios": [1, 1]})
     axes = axes.flatten()
-    columns = ['facebook_share', 'extremist_vote', 'median_income', 'share_high_school_graduates']
-    col_name = ['Facebook consumption', 'Radical vote', 'Median income', 'No higher education']
+    columns = ['social_media_share', 'extremist_vote', 'median_income', 'share_high_school_graduates']
+    col_name = ['Social media (a) ', 'Radical vote (b)', 'Median income (c)', 'No higher education (d)']
     vmin, vmax = -3, 3
     cmap = 'plasma'
+
     for i in range(len(columns)):
         plotting.map.simple_normalized_map(ax=axes[i], data=data, column=columns[i], cmap=cmap, legend=False, vmin=vmin, vmax=vmax, outlier_threshold=.995)
         axes[i].set_title(col_name[i])
@@ -39,7 +40,7 @@ def paris_map_plots():
     sm.set_array([]) # this adds in the colorbar
     cbar = fig.colorbar(sm, ax=axes, orientation='vertical', fraction=0.025, pad=0.1, label='Standardized value')
     plt.show()
-    fig.savefig(f'{figure_folder_path}/paris_map.pdf', bbox_inches='tight')
+    fig.savefig(f'{figure_folder_path}/paris_map.png', bbox_inches='tight')
 
 
 def save_plotly_fig(fig, file_name):
@@ -55,8 +56,8 @@ def social_media_shares_income_and_extremism():
     fig = go.Figure()
     traces = plotting.barchart.barchart_mean_values_along_axis(data=data, nbins=nbins, x_axis='median_income', col_label={'social_media_share': 'Social media', 'extremist_vote': 'Radical vote'})
     fig.add_traces(traces)
-    fig.update_layout(template='plotly_white', barmode='group', xaxis_title='Standardized Log( median income )', yaxis_title='Standardized value', font=dict(size=30, color="Black", family="Arial"), legend=dict(font=dict(size=30)),
-                        width=1000, height=800)
+    fig.update_layout(template='plotly_white', barmode='group', xaxis_title='Standardized Log( median income )', yaxis_title='Standardized value', font=dict(size=30, color="Black", family="Times New Roman"), legend=dict(font=dict(size=30)),
+                        width=1000, height=500)
     fig.show()
     save_plotly_fig(fig, 'social_media_shares_income_and_extremism')
 
@@ -69,7 +70,7 @@ def social_media_shares_extremism_scatter_plot():
     trace_scatter, trace_regression_line, reg = plotting.scatter.simple_regression_scatter(data=data, x_axis='social_media_percentage', y_axis='extremist_vote', outlier_threshold=0.99, marker_opacity=0.3, line_width=3)
     fig.add_traces([trace_scatter, trace_regression_line])
     fig.add_annotation(x=0.05, y=0.95, xref='paper', yref='paper', text=f'R<sup>2</sup> = {reg.rsquared:.2f}  Slope = {np.round(reg.params[1], decimals=4)}', showarrow=False, font=dict(size=30, color="Black", family="Arial"))
-    fig.update_layout(template='plotly_white', xaxis_title='Percentage social media', yaxis_title='Percentage radical vote', font=dict(size=30, color="Black", family="Arial"), width=1000, height=800)
+    fig.update_layout(template='plotly_white', xaxis_title='Social Media Index', yaxis_title='Radical Vote Index', font=dict(size=30, color="Black", family="Times New Roman"), width=1000, height=500)
     fig.show()
     save_plotly_fig(fig, 'social_media_shares_extremism_scatter_plot')
 
@@ -101,18 +102,22 @@ def social_media_shares_with_controls_coefficient_plot():
     fig.show()
 
     coeff_no_controls, std_err_no_controls = get_coefficient_regression_with_controls(data=data, x_axis=xaxis, y_axis=yaxis, controls=[])
-    coeff_income, std_err_income = get_coefficient_regression_with_controls(data=data, x_axis=xaxis, y_axis=yaxis, controls=income_vars)
+    coeff_u, std_err_u = get_coefficient_regression_with_controls(data=data, x_axis=xaxis, y_axis=yaxis, controls=unemployment_vars)
+    coeff_u_e, std_err_u_e = get_coefficient_regression_with_controls(data=data, x_axis=xaxis, y_axis=yaxis, controls=unemployment_vars + education_vars)
+    coeff_u_e_i, std_err_u_e_i = get_coefficient_regression_with_controls(data=data, x_axis=xaxis, y_axis=yaxis, controls=unemployment_vars + education_vars + income_vars)
     coeff_all, std_err_all = get_coefficient_regression_with_controls(data=data, x_axis=xaxis, y_axis=yaxis, controls=income_vars + immigration_vars + education_vars + unemployment_vars + gender_vars + age_vars)
 
     data = [['No controls', coeff_no_controls, std_err_no_controls],
-            ['Model 1', coeff_income, std_err_income],
-            ['Model 2', coeff_all, std_err_all]]
+            ['Model 1', coeff_u, std_err_u],
+            ['Model 2', coeff_u_e, std_err_u_e],
+            ['Model 3', coeff_u_e_i, std_err_u_e_i],
+            ['Model 4', coeff_all, std_err_all]]
 
     data = pd.DataFrame(data, columns=['controls', 'coefficient', 'std_err'])
     fig = go.Figure()
     barchart_trace = go.Bar(x=data['controls'], y=data['coefficient'], error_y=dict(type='data', array=data['std_err']))
     fig.add_trace(barchart_trace)
-    fig.update_layout(template='plotly_white', xaxis_title='Controls', yaxis_title='Coefficient', font=dict(size=30, color="Black", family="Arial"), width=1000, height=800)
+    fig.update_layout(template='plotly_white', xaxis_title='Controls', yaxis_title='Coefficient', font=dict(size=30, color="Black", family="Times New Roman"), width=1000, height=500)
     fig.show()
     save_plotly_fig(fig, 'social_media_shares_with_controls_coefficient_plot')
 
@@ -134,6 +139,6 @@ def run_multivariable_regression(data: pd.DataFrame, y_axis: str) -> statmodels_
 
 if __name__ == '__main__':
     paris_map_plots()
-    #social_media_shares_income_and_extremism()
-    #social_media_shares_extremism_scatter_plot()
-    #social_media_shares_with_controls_coefficient_plot()
+    social_media_shares_income_and_extremism()
+    social_media_shares_extremism_scatter_plot()
+    social_media_shares_with_controls_coefficient_plot()
