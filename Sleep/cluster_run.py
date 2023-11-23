@@ -23,7 +23,6 @@ def load_netmob_tile_dataset_city(file_path: str):
 
 
 if __name__ == '__main__':
-    #fp = '/Users/andrea/Desktop/PhD/Projects/Current/NetMob/Data/SyntheticData'
-    # c = mt.City(sys.argv[1])
-    # aggregate_netmob_tile_to_insee_tile_level_and_save(folder_path=fp, city=c)
-    print('Hello')
+    fp = '/cluster/work/gess/coss/users/anmusso/Temp'
+    c = mt.City(sys.argv[1])
+    aggregate_netmob_tile_to_insee_tile_level_and_save(folder_path=fp, city=c)
