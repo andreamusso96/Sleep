@@ -10,6 +10,9 @@ def submit_jobs():
     for city in cities:
         submit_command = f'sbatch --mem-per-cpu=8G --ntasks=1 --cpus-per-task=8 --time=08:00:00 --wrap="python -m cluster_run {city.value}"'
         print('SUBMITTING JOB WITH COMMAND: ', submit_command)
-        process = subprocess.Popen(submit_command, shell=True)
-        process.communicate()
+        os.system(submit_command)
         time.sleep(2)
+
+
+if __name__ == '__main__':
+    submit_jobs()
