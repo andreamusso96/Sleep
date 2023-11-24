@@ -1,6 +1,10 @@
 import numpy as np
 import plotly.graph_objects as go
+from typing import List, Dict, Union, Callable
 
+from mobile_data import ScreenTimeData, MobileTrafficData
+import engineer_features as ef
+import transform
 
 def generate_distribution(n_samples: int, exponent: float, bound: float):
     samples = np.array([generate_sample(exponent=exponent, bound=bound) for n in range(n_samples)])
@@ -12,6 +16,10 @@ def generate_sample(exponent: float, bound: float) -> int:
     cum_sum_sample = np.cumsum(zipf_sample)
     n = np.searchsorted(cum_sum_sample, v=bound) - 1
     return n
+
+
+def random_sample(exponent: float, bound: float) -> int:
+    return np.random.randint(low=0, high=bound, size=1)
 
 
 if __name__ == '__main__':

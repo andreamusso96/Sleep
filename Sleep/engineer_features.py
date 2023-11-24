@@ -8,11 +8,25 @@ import mobile_traffic as mt
 import insee
 import noise
 
+from mobile_data import MobileData, ScreenTimeData
 
-def night_screen_index_insee_tile(screen_time_data: Dict[mt.City, xr.DataArray]) -> pd.DataFrame:
+
+def night_screen_index_insee_tile(screen_time_data: ScreenTimeData) -> pd.DataFrame:
+    night_screen_index = _night_screen_index(screen_time_data=screen_time_data, sum_over='service')
+    return night_screen_index
+
+
+def night_screen_index_service(screen_time_data: ScreenTimeData) -> pd.DataFrame:
+    night_screen_index = _night_screen_index(screen_time_data=screen_time_data, sum_over='insee_tile')
+    night_screen_index.reset_index(names=['service'], inplace=True)
+    return night_screen_index
+
+
+def _night_screen_index(screen_time_data: ScreenTimeData, sum_over: str) -> pd.DataFrame:
     night_screen_index = []
-    for city in screen_time_data:
-        night_screen_index_city = night_screen_index_insee_tile_city(traffic_data=screen_time_data[city])
+    for city in screen_time_data.cities():
+        screen_time_data_city = screen_time_data.data[city]
+        night_screen_index_city = _night_screen_index_city(screen_time_data=screen_time_data_city, sum_over=sum_over)
         night_screen_index_city['city'] = city.value
         night_screen_index.append(night_screen_index_city)
 
@@ -20,15 +34,21 @@ def night_screen_index_insee_tile(screen_time_data: Dict[mt.City, xr.DataArray])
     return night_screen_index
 
 
-def night_screen_index_insee_tile_city(traffic_data: xr.DataArray) -> pd.DataFrame:
-    traffic_data_location_by_time = traffic_data.sum(dim='service')
-    total_traffic_location = traffic_data_location_by_time.sum(dim='time')
-    traffic_probability_location_by_time = (traffic_data_location_by_time / total_traffic_location).to_pandas()
-    cumulative_traffic_distribution_location_by_time = traffic_probability_location_by_time.cumsum(axis=1)
-    mean_cumulative_traffic_distribution_location_by_time = cumulative_traffic_distribution_location_by_time.mean(axis=0)
-    deviation_from_mean = -1 * cumulative_traffic_distribution_location_by_time.subtract(mean_cumulative_traffic_distribution_location_by_time, axis=1)
-    night_screen_index = deviation_from_mean.sum(axis=1).to_frame(name='night_screen_index')
+def _night_screen_index_city(screen_time_data: xr.DataArray, sum_over: str):
+    screen_time_data_x_by_time = screen_time_data.sum(dim=sum_over)
+    total_screen_time_x = screen_time_data_x_by_time.sum(dim='time')
+    screen_time_probability_x_by_time = (screen_time_data_x_by_time / total_screen_time_x).to_pandas()
+    difference = _compute_difference_between_cumulative_distribution_and_mean_of_cumulative_distributions(probability_distributions=screen_time_probability_x_by_time)
+    night_screen_index = -1 * difference.rename(columns={'difference': 'night_screen_index'})
     return night_screen_index
+
+
+def _compute_difference_between_cumulative_distribution_and_mean_of_cumulative_distributions(probability_distributions: pd.DataFrame) -> pd.DataFrame:
+    cumulative_distribution = probability_distributions.cumsum(axis=1)
+    mean_cumulative_distribution = cumulative_distribution.mean(axis=0)
+    difference = cumulative_distribution.subtract(mean_cumulative_distribution, axis=1)
+    difference = difference.sum(axis=1).to_frame(name='difference')
+    return difference
 
 
 def log2_mean_income_insee_tile(insee_tiles: List[str]) -> pd.DataFrame:
@@ -36,6 +56,15 @@ def log2_mean_income_insee_tile(insee_tiles: List[str]) -> pd.DataFrame:
     income = np.log2(income)
     income = income.rename(columns={'Ind_snv': 'log2_income'})
     return income
+
+
+def map_insee_tile_to_income_category(insee_tiles: List[str], income_quantiles: List[float]) -> Dict[str, str]:
+    log2_income = log2_mean_income_insee_tile(insee_tiles=insee_tiles)
+    log2_income_quantiles = np.quantile(log2_income['log2_income'], q=income_quantiles)
+    bins = [-np.inf] + log2_income_quantiles.tolist() + [np.inf]
+    income_categories = pd.cut(log2_income['log2_income'], bins=bins, labels=[f'q{k}' for k in range(len(bins) - 1)])
+    map_insee_tile_to_income_category = income_categories.to_dict()
+    return map_insee_tile_to_income_category
 
 
 def get_frequently_visited_amenities():
@@ -71,17 +100,54 @@ def get_frequently_visited_amenities():
     return frequently_visited_amenities
 
 
-def log2_amenity_counts_insee_tile(insee_tiles: List[str], buffer_size_m: float = 1000, frequently_visited_amenities: bool = False) -> pd.DataFrame:
+def get_open_at_night_amenities():
+    open_at_night_amenities = [
+        "A101",  # POLICE
+        "A104",  # GENDARMERIE
+        "A504",  # RESTAURANT- RESTAURATION RAPIDE
+        "B101",  # HYPERMARCHÉ
+        "B316",  # STATION SERVICE
+        "D106",  # URGENCE
+        "D303",  # AMBULANCE
+        "D307",  # PHARMACIE
+        "E102",  # AÉROPORT
+        "E107",  # GARE DE VOYAGEURS D'INTERET NATIONAL
+        "E108",  # GARE DE VOYAGEURS D'INTERET RÉGIONAL
+        "F101",  # BASSIN DE NATATION
+        "F103",  # TENNIS
+        "F107",  # ATHLÉTISME
+        "F121",  # SALLES MULTISPORTS (GYMNASES)
+        "F303",  # CINÉMA
+        "G102",  # HÔTEL
+        "G103",  # CAMPING
+    ]
+
+    return open_at_night_amenities
+
+
+class AmenityType:
+    ALL = 'all'
+    FREQUENTLY_VISITED = 'frequently_visited'
+    OPEN_AT_NIGHT = 'open_at_night'
+
+
+def log2_amenity_counts_insee_tile(insee_tiles: List[str], buffer_size_m: float = 1000, amenity_type: AmenityType = AmenityType.ALL) -> pd.DataFrame:
     insee_tiles_geo = insee.tile.get_geo_data(tile=insee_tiles)
     insee_tiles_buffered = insee_tiles_geo.buffer(buffer_size_m)
     insee_tiles_buffered = gpd.GeoDataFrame(geometry=insee_tiles_buffered, index=insee_tiles_buffered.index)
     amenity_counts = insee.equipment.get_equipment_counts(polygons=insee_tiles_buffered, resolution=insee.equipment.EquipmentResolution.HIGH)
 
-    if frequently_visited_amenities:
+    col_name = 'log2_amenity_counts'
+    amenities = amenity_counts.columns
+    if amenity_type == AmenityType.FREQUENTLY_VISITED:
         frequently_visited_amenities = get_frequently_visited_amenities()
-        amenity_counts = amenity_counts[frequently_visited_amenities].copy()
+        amenity_counts = amenity_counts[np.intersect1d(amenities, frequently_visited_amenities)].copy()
+        col_name = 'log2_fv_amenity_counts'
+    elif amenity_type == AmenityType.OPEN_AT_NIGHT:
+        open_at_night_amenities = get_open_at_night_amenities()
+        amenity_counts = amenity_counts[np.intersect1d(amenities, open_at_night_amenities)].copy()
+        col_name = 'log2_oan_amenity_counts'
 
-    col_name = 'log2_fv_amenity_counts' if frequently_visited_amenities else 'log2_amenity_counts'
     amenity_counts = amenity_counts.sum(axis=1).to_frame(name=col_name)
     amenity_counts = np.log2(1 + amenity_counts)
     return amenity_counts

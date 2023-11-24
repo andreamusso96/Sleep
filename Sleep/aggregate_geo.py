@@ -6,6 +6,8 @@ from tqdm import tqdm
 import insee
 import mobile_traffic as mt
 
+from mobile_data import MobileData, TrafficData, ScreenTimeData
+
 
 # Matchings
 # ---------
@@ -117,9 +119,9 @@ def perform_aggregation(data: pd.DataFrame, variables: List[str], aggregation_fc
 # ---------------
 
 
-def aggregate_netmob_tile_level_traffic_data_to_insee_tile_level(traffic_data_netmob_tile: Dict[mt.City, xr.DataArray]) -> Dict[mt.City, xr.DataArray]:
-    traffic_data_insee_tile = {city: aggregate_netmob_tile_level_traffic_data_city_to_insee_tile_level(traffic_data_netmob_tile=traffic_data_city, city=city) for city, traffic_data_city in tqdm(traffic_data_netmob_tile.items())}
-    return traffic_data_insee_tile
+def aggregate_netmob_tile_level_traffic_data_to_insee_tile_level(traffic_data_netmob_tile: TrafficData) -> TrafficData:
+    traffic_data_insee_tile = {city: aggregate_netmob_tile_level_traffic_data_city_to_insee_tile_level(traffic_data_netmob_tile=traffic_data_city, city=city) for city, traffic_data_city in tqdm(traffic_data_netmob_tile.data.items())}
+    return TrafficData(data=traffic_data_insee_tile)
 
 
 def aggregate_netmob_tile_level_traffic_data_city_to_insee_tile_level(traffic_data_netmob_tile: xr.DataArray, city: mt.City) -> xr.DataArray:
@@ -140,14 +142,3 @@ def aggregate_netmob_tile_level_traffic_data_city_to_insee_tile_level(traffic_da
     coords = [insee_tiles, services, times]
     traffic_data_insee_tiles = xr.DataArray(traffic_data_insee_tiles, dims=dims, coords=coords)
     return traffic_data_insee_tiles
-
-
-if __name__ == '__main__':
-    from synthetic_data import load_synthetic_dataset
-    fp = '/Users/andrea/Desktop/PhD/Projects/Current/NetMob/Data/SyntheticData'
-    d = load_synthetic_dataset(folder_path=fp, insee_tiles=False)
-    agg = aggregate_netmob_tile_level_traffic_data_to_insee_tile_level(traffic_data_netmob_tile=d)
-    for c, dat in agg.items():
-        time_as_str = [str(t) for t in dat.time.values]
-        data_ = dat.assign_coords(time=time_as_str)
-        data_.to_netcdf(f'{fp}/mobile_traffic_{c.value.lower()}_by_insee_tile_service_and_time.nc')
