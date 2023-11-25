@@ -160,14 +160,17 @@ def noise_levels_insee_tile(insee_tiles: List[str]):
     return noise_estimates
 
 
+def log10_service_consumption(mobile_data: MobileData) -> pd.DataFrame:
+    stacked_data = mobile_data.stack_data_along_insee_tile_axis()
+    service_consumption = stacked_data.sum(dim='time').sum(dim='insee_tile').to_pandas()
+    service_consumption = np.log10(1 + service_consumption)
+    service_consumption = service_consumption.to_frame(name='log10_service_consumption')
+    return service_consumption
+
+
 if __name__ == '__main__':
     from mobile_data import TrafficData
+    from visualize import figure_data_path
     td = TrafficData.load_dataset(synthetic=False, insee_tiles=True)
-    size_bytes = 0
-    for city in td.cities():
-        data_city = td.data[city]
-        size_bytes += data_city.nbytes
-
-    size_gb = size_bytes / 1e9
-    print('Size in GB:', size_gb)
+    a = night_screen_index_insee_tile(screen_time_data=td)
 

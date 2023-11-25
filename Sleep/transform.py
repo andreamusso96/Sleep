@@ -85,15 +85,30 @@ def night_screen_index_and_log2_amenity_counts(screen_time_data: ScreenTimeData,
 
 
 def rca_income_and_services(mobile_data: MobileData, income_quantiles: List[float]) -> pd.DataFrame:
-    td_by_income_and_service = mobile_data_by_income_and_service(mobile_data=mobile_data, income_quantiles=income_quantiles)
-    rca = compute_rca(df=td_by_income_and_service)
+    md_by_income_and_service = mobile_data_by_income_and_service(mobile_data=mobile_data, income_quantiles=income_quantiles)
+    rca = compute_rca(df=md_by_income_and_service)
     return rca
 
 
 def rca_income_and_time(screen_time_data: ScreenTimeData, income_quantiles: List[float]) -> pd.DataFrame:
-    td_by_income_and_time = screen_time_data_by_income_and_time(screen_time_data=screen_time_data, income_quantiles=income_quantiles)
-    rca = compute_rca(df=td_by_income_and_time)
+    screen_time_by_income_and_time = screen_time_data_by_income_and_time(screen_time_data=screen_time_data, income_quantiles=income_quantiles)
+    rca = compute_rca(df=screen_time_by_income_and_time)
     return rca
+
+
+def rca_insee_tile_and_service(mobile_data: MobileData) -> pd.DataFrame:
+    md_by_insee_tile_and_service = mobile_data_by_insee_tile_and_service(mobile_data=mobile_data)
+    rca = compute_rca(df=md_by_insee_tile_and_service)
+    return rca
+
+
+def rca_insee_tile_service_and_tile_geo(mobile_data: MobileData) -> gpd.GeoDataFrame:
+    rca = rca_insee_tile_and_service(mobile_data=mobile_data)
+    insee_tiles = list(rca.index)
+    tile_geo = insee.tile.get_geo_data(tile=insee_tiles)
+    rca_and_tile_geo = rca.merge(tile_geo, left_index=True, right_index=True)
+    rca_and_tile_geo = gpd.GeoDataFrame(rca_and_tile_geo, geometry='geometry')
+    return rca_and_tile_geo
 
 
 def rca_income_and_services_robustness__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int) -> xr.DataArray:
@@ -106,19 +121,29 @@ def rca_income_and_services_robustness__amenity(screen_time_data: MobileData, in
     return rca_samples
 
 
+def service_space(mobile_data: MobileData) -> pd.DataFrame:
+    rca_tile_service = rca_insee_tile_and_service(mobile_data=mobile_data)
+    binary_rca = rca_tile_service.map(func=lambda x: 1 if x > 1 else 0)
+
+    co_occurrence_rca = binary_rca.T @ binary_rca
+    n_tiles_rca = binary_rca.sum(axis=0)
+    max_outer_product_n_tile_rca = pd.DataFrame(np.maximum.outer(n_tiles_rca.values, n_tiles_rca.values), index=n_tiles_rca.index, columns=n_tiles_rca.index)
+    proximity = co_occurrence_rca / max_outer_product_n_tile_rca
+    return proximity
+
 
 # General
 # ------------------
 
 
 def mobile_data_by_income_service_time_and_city(mobile_data: MobileData, income_quantiles: List[float]) -> xr.DataArray:
-    td_by_income_service_and_time = []
+    md_by_income_service_and_time = []
     for city in mobile_data.cities():
-        td_city_by_income_service_and_time = group_insee_tile_by_income(data=mobile_data.data[city], income_quantiles=income_quantiles)
-        td_city_by_income_service_and_time = td_city_by_income_service_and_time.expand_dims(dim={'city': [city]})
-        td_by_income_service_and_time.append(td_city_by_income_service_and_time)
+        md_city_by_income_service_and_time = group_insee_tile_by_income(data=mobile_data.data[city], income_quantiles=income_quantiles)
+        md_city_by_income_service_and_time = md_city_by_income_service_and_time.expand_dims(dim={'city': [city]})
+        md_by_income_service_and_time.append(md_city_by_income_service_and_time)
 
-    td_by_income_service_time_and_city = xr.concat(td_by_income_service_and_time, dim='city')
+    td_by_income_service_time_and_city = xr.concat(md_by_income_service_and_time, dim='city')
     return td_by_income_service_time_and_city
 
 
@@ -132,21 +157,27 @@ def group_insee_tile_by_income(data: xr.DataArray, income_quantiles: List[float]
 
 
 def mobile_data_by_income_service_and_time(mobile_data: MobileData, income_quantiles: List[float]) -> xr.DataArray:
-    stacked_traffic_data = mobile_data.stack_data_along_insee_tile_axis()
-    td_by_income_service_and_time = group_insee_tile_by_income(data=stacked_traffic_data, income_quantiles=income_quantiles)
-    return td_by_income_service_and_time
+    stacked_mobile_data = mobile_data.stack_data_along_insee_tile_axis()
+    md_by_income_service_and_time = group_insee_tile_by_income(data=stacked_mobile_data, income_quantiles=income_quantiles)
+    return md_by_income_service_and_time
 
 
 def mobile_data_by_income_and_service(mobile_data: MobileData, income_quantiles: List[float]) -> pd.DataFrame:
-    td_by_income_service_and_time = mobile_data_by_income_service_and_time(mobile_data=mobile_data, income_quantiles=income_quantiles)
-    td_by_income_and_service = td_by_income_service_and_time.sum(dim='time').to_pandas()
-    return td_by_income_and_service
+    md_by_income_service_and_time = mobile_data_by_income_service_and_time(mobile_data=mobile_data, income_quantiles=income_quantiles)
+    md_by_income_and_service = md_by_income_service_and_time.sum(dim='time').to_pandas()
+    return md_by_income_and_service
 
 
 def screen_time_data_by_income_and_time(screen_time_data: ScreenTimeData, income_quantiles: List[float]) -> pd.DataFrame:
-    td_by_income_service_and_time = mobile_data_by_income_service_and_time(mobile_data=screen_time_data, income_quantiles=income_quantiles)
-    td_by_income_and_time = td_by_income_service_and_time.sum(dim='service').to_pandas()
-    return td_by_income_and_time
+    screen_time_by_income_service_and_time = mobile_data_by_income_service_and_time(mobile_data=screen_time_data, income_quantiles=income_quantiles)
+    screen_time_by_income_and_time = screen_time_by_income_service_and_time.sum(dim='service').to_pandas()
+    return screen_time_by_income_and_time
+
+
+def mobile_data_by_insee_tile_and_service(mobile_data: MobileData) -> pd.DataFrame:
+    stacked_mobile_data = mobile_data.stack_data_along_insee_tile_axis()
+    md_by_insee_tile_and_service = stacked_mobile_data.sum(dim='time').to_pandas()
+    return md_by_insee_tile_and_service
 
 
 def compute_rca(df: pd.DataFrame) -> pd.DataFrame:
@@ -156,8 +187,10 @@ def compute_rca(df: pd.DataFrame) -> pd.DataFrame:
 
 
 if __name__ == '__main__':
-
-    fp = '/Users/andrea/Desktop/PhD/Projects/Current/NetMob/Data/SyntheticData'
+    from visualize import figure_data_path
     td = MobileData.load_dataset(synthetic=False, insee_tiles=True)
-    iq = [0.3, 0.7]
-    rca_income_serv = rca_income_and_services(mobile_data=td, income_quantiles=iq)
+    # td.data = {mt.City.PARIS: td.data[mt.City.PARIS]}
+    # s = rca_insee_tile_service_and_tile_geo(mobile_data=td)
+    # s.to_file(f'{figure_data_path}/rca_insee_tile_service_and_tile_geo.geojson', driver='GeoJSON')
+    s = night_screen_index_income_category_and_tile_geo(screen_time_data=td, income_quantiles=[0.3, 0.7])
+    s.to_file(f'{figure_data_path}/nsi_income_tile_geo_trial.geojson', driver='GeoJSON')
