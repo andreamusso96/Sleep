@@ -161,14 +161,13 @@ def noise_levels_insee_tile(insee_tiles: List[str]):
 
 
 if __name__ == '__main__':
-    from synthetic_data import load_synthetic_dataset
-    fp = '/Users/andrea/Desktop/PhD/Projects/Current/NetMob/Data/SyntheticData'
-    d = load_synthetic_dataset(folder_path=fp, insee_tiles=True)
-    nsi = night_screen_index_insee_tile(screen_time_data=d)
-    i_tiles = list(nsi.index)
-    # log2_income = log2_mean_income_insee_tile(insee_tiles=i_tiles)
-    # log2_fv_amenities = log2_amenity_counts_insee_tile(insee_tiles=i_tiles, frequently_visited_amenities=True)
-    # log2_amenities = log2_amenity_counts_insee_tile(insee_tiles=i_tiles, frequently_visited_amenities=False)
-    i_tiles_paris = nsi.loc[nsi['city'] == 'Paris'].index
-    noise_levels = noise_levels_insee_tile(insee_tiles=i_tiles_paris)
+    from mobile_data import TrafficData
+    td = TrafficData.load_dataset(synthetic=False, insee_tiles=True)
+    size_bytes = 0
+    for city in td.cities():
+        data_city = td.data[city]
+        size_bytes += data_city.nbytes
+
+    size_gb = size_bytes / 1e9
+    print('Size in GB:', size_gb)
 
