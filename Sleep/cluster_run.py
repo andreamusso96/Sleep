@@ -28,7 +28,7 @@ def load_netmob_tile_dataset_city(file_path: str):
 
 def get_base_data(folder_data: str):
     income_quantiles = [0.3, 0.7]
-    n_sample_screen_time_robustness = 30
+    n_sample_screen_time_robustness = 15
     traffic_data = TrafficData.load_dataset(synthetic=False, insee_tiles=True, folder_path=folder_data)
     screen_time_data = robustness.screen_time_data_sample(traffic_data=traffic_data, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler())
     return traffic_data, screen_time_data, income_quantiles, n_sample_screen_time_robustness
