@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import mobile_traffic as mt
-from memory_profiler import profile
 
 import engineer_features as ef
 import transform
@@ -92,7 +91,6 @@ def screen_time_data_sample(traffic_data: TrafficData, traffic_per_minute_sample
     return screen_time_data
 
 
-@profile
 def city_screen_time_data_sample(traffic_data: xr.DataArray, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> xr.DataArray:
     screen_time_city = []
     for service in tqdm(traffic_per_minute_sampler):
@@ -192,7 +190,4 @@ def thresholds_and_buffers_amenities():
 
 
 if __name__ == '__main__':
-    td = TrafficData.load_dataset(synthetic=False, insee_tiles=True)
-    screen_time_data = city_screen_time_data_sample(traffic_data=td.data[mt.City.PARIS], traffic_per_minute_sampler=service_traffic_per_minute_sampler())
-    nbytes_screen_time_data = screen_time_data.nbytes
-    print(f'Number of gigabytes: {nbytes_screen_time_data / 10 ** 9}')
+    pass
