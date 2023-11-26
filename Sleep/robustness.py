@@ -1,4 +1,5 @@
 from typing import Dict, List, Callable, Any, Union, Tuple
+from enum import Enum
 
 import xarray as xr
 import pandas as pd
@@ -11,8 +12,13 @@ import transform
 from mobile_data import MobileData, TrafficData, ScreenTimeData
 
 
-def rca_income_and_service_samples__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> xr.DataArray:
-    screen_time_data_samples = get_screen_time_data_samples(traffic_data=traffic_data, n_samples=n_samples, traffic_per_minute_sampler=traffic_per_minute_sampler)
+class SamplingTechnique(Enum):
+    INDIVIDUAL = 'individual'
+    MEAN = 'mean'
+
+
+def rca_income_and_service_samples__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]], sampling_technique: SamplingTechnique) -> xr.DataArray:
+    screen_time_data_samples = get_screen_time_data_samples(traffic_data=traffic_data, n_samples=n_samples, traffic_per_minute_sampler=traffic_per_minute_sampler, sampling_technique=sampling_technique)
     rca_samples = _rca_income_and_service_samples(mobile_data_samples=screen_time_data_samples, income_quantiles=income_quantiles)
     return rca_samples
 
@@ -23,8 +29,8 @@ def rca_income_and_service_samples__amenity(mobile_data: MobileData, thresholds_
     return rca_samples
 
 
-def night_screen_index_samples__screen_time(traffic_data: TrafficData, n_samples: int, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> pd.DataFrame:
-    screen_time_data_samples = get_screen_time_data_samples(traffic_data=traffic_data, n_samples=n_samples, traffic_per_minute_sampler=traffic_per_minute_sampler)
+def night_screen_index_samples__screen_time(traffic_data: TrafficData, n_samples: int, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]], sampling_technique: SamplingTechnique) -> pd.DataFrame:
+    screen_time_data_samples = get_screen_time_data_samples(traffic_data=traffic_data, n_samples=n_samples, traffic_per_minute_sampler=traffic_per_minute_sampler, sampling_technique=sampling_technique)
     nsi_samples = _night_screen_index_samples(screen_time_data_samples=screen_time_data_samples)  # noqa
     return nsi_samples
 
@@ -40,9 +46,14 @@ def get_amenity_data_samples(mobile_data: MobileData, thresholds_and_buffers: Li
     return amenity_data_samples
 
 
-def get_screen_time_data_samples(traffic_data: TrafficData, n_samples: int, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> Dict[str, MobileData]:
+def get_screen_time_data_samples(traffic_data: TrafficData, n_samples: int, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]], sampling_technique: SamplingTechnique) -> Dict[str, MobileData]:
     mobile_data_ = traffic_data.filter(service=list(traffic_per_minute_sampler.keys()))
-    screen_time_data_samples = {str(i): screen_time_data_sample(traffic_data=mobile_data_, traffic_per_minute_sampler=traffic_per_minute_sampler) for i in range(n_samples)}
+    if sampling_technique == SamplingTechnique.INDIVIDUAL:
+        screen_time_data_samples = {str(i): screen_time_data_sample__individual(traffic_data=mobile_data_, traffic_per_minute_sampler=traffic_per_minute_sampler) for i in range(n_samples)}
+    elif sampling_technique == SamplingTechnique.MEAN:
+        screen_time_data_samples = {str(i): screen_time_data_sample__mean(traffic_data=mobile_data_, traffic_per_minute_sampler=traffic_per_minute_sampler) for i in range(n_samples)}
+    else:
+        raise ValueError(f'Unknown sampling technique {sampling_technique}')
     return screen_time_data_samples
 
 
@@ -67,8 +78,7 @@ def _night_screen_index_samples(screen_time_data_samples: Dict[str, ScreenTimeDa
     return night_screen_indices
 
 
-# Amenity data sampling
-
+# Amenity sampling
 
 def filter_out_tiles_with_many_amenities_open_at_night(mobile_data: MobileData, threshold: int, buffer_size_m: float) -> MobileData:
     data = {}
@@ -84,14 +94,27 @@ def filter_out_tiles_with_many_amenities_open_at_night(mobile_data: MobileData, 
     return MobileData(data=data)
 
 
-# Screen time robustness data sampling
-def screen_time_data_sample(traffic_data: TrafficData, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> ScreenTimeData:
-    screen_time_data = {city: city_screen_time_data_sample(traffic_data=traffic_data.data[city], traffic_per_minute_sampler=traffic_per_minute_sampler) for city in traffic_data.cities()}
+def thresholds_and_buffers_amenities():
+    thresholds_and_buffers = [
+        (0, 500),
+        (0, 200),
+        (3, 1000),
+        (3, 500),
+        (3, 200),
+        (6, 1000),
+        (6, 500),
+    ]
+    return thresholds_and_buffers
+
+
+# Screen time individual sampling
+def screen_time_data_sample__individual(traffic_data: TrafficData, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> ScreenTimeData:
+    screen_time_data = {city: city_screen_time_data_sample__individual(traffic_data=traffic_data.data[city], traffic_per_minute_sampler=traffic_per_minute_sampler) for city in traffic_data.cities()}
     screen_time_data = ScreenTimeData(data=screen_time_data)
     return screen_time_data
 
 
-def city_screen_time_data_sample(traffic_data: xr.DataArray, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> xr.DataArray:
+def city_screen_time_data_sample__individual(traffic_data: xr.DataArray, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> xr.DataArray:
     screen_time_city = []
     for service in tqdm(traffic_per_minute_sampler):
         traffic_data_service = traffic_data.sel(service=service.value)
@@ -124,6 +147,19 @@ def _heuristic_for_number_of_samples(max_traffic_data: float, traffic_per_minute
     n_samples = int(0.5 * max_traffic_data / mean_traffic_generation_sample)
     return n_samples
 
+
+# Screen time mean sampling
+
+
+def screen_time_data_sample__mean(traffic_data: TrafficData, traffic_per_minute_sampler: Dict[mt.Service, Callable[[int], np.ndarray]]) -> ScreenTimeData:
+    traffic_per_minute_level = np.array([traffic_per_minute_sampler[service](1) for service in traffic_per_minute_sampler]).flatten()
+    traffic_per_minute_level = xr.DataArray(traffic_per_minute_level, dims=['service'], coords=[[s.value for s in traffic_per_minute_sampler]])
+    screen_time_data = {city: traffic_data.data[city] / traffic_per_minute_level for city in traffic_data.cities()}
+    screen_time_data = ScreenTimeData(data=screen_time_data)
+    return screen_time_data
+
+
+# Samplers
 
 def get_normal_distribution_sampler(mean: float, std: float) -> Callable[[int], np.ndarray]:
     def normal_distribution_sampler(n_samples: int) -> np.ndarray:
@@ -174,19 +210,6 @@ def service_traffic_per_minute_sampler() -> Dict[mt.Service, Callable[[int], np.
 
     samplers = {s: get_normal_distribution_sampler(mean=hourly_traffic_mb[s] / 60, std=0.5 * hourly_traffic_mb[s] / 60) for s in hourly_traffic_mb}
     return samplers
-
-
-def thresholds_and_buffers_amenities():
-    thresholds_and_buffers = [
-        (0, 500),
-        (0, 200),
-        (3, 1000),
-        (3, 500),
-        (3, 200),
-        (6, 1000),
-        (6, 500),
-    ]
-    return thresholds_and_buffers
 
 
 if __name__ == '__main__':

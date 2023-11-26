@@ -30,7 +30,7 @@ def get_base_data(folder_data: str):
     income_quantiles = [0.3, 0.7]
     n_sample_screen_time_robustness = 15
     traffic_data = TrafficData.load_dataset(synthetic=False, insee_tiles=True, folder_path=folder_data)
-    screen_time_data = robustness.screen_time_data_sample(traffic_data=traffic_data, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler())
+    screen_time_data = robustness.screen_time_data_sample__individual(traffic_data=traffic_data, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler())
     return traffic_data, screen_time_data, income_quantiles, n_sample_screen_time_robustness
 
 
@@ -62,12 +62,16 @@ def generate_and_save_rca_robustness_checks_data(folder_save: str, folder_data: 
     traffic_data, screen_time_data, income_quantiles, n_sample_screen_time_robustness = get_base_data(folder_data=folder_data)
 
     rca_income_service_data = transform.rca_income_and_services(mobile_data=screen_time_data, income_quantiles=income_quantiles)
-    rca_income_service_robustness__screen_time_data = transform.rca_income_and_services_robustness__screen_time(traffic_data=traffic_data, income_quantiles=income_quantiles, n_samples=n_sample_screen_time_robustness)
+    rca_income_service_robustness__screen_time_data = transform.rca_income_and_services_robustness__screen_time(traffic_data=traffic_data, income_quantiles=income_quantiles, n_samples=n_sample_screen_time_robustness, sampling_technique=robustness.SamplingTechnique.INDIVIDUAL)
     rca_income_service_robustness__amenity_data = transform.rca_income_and_services_robustness__amenity(screen_time_data=screen_time_data, income_quantiles=income_quantiles)
 
-    rca_income_service_data.to_csv(f'{folder_save}/rca_income_service.csv')
-    rca_income_service_robustness__screen_time_data.to_netcdf(f'{folder_save}/rca_income_service_robustness__screen_time.csv')
-    rca_income_service_robustness__amenity_data.to_netcdf(f'{folder_save}/rca_income_service_robustness__amenity.csv')
+    rca_income_service_data.columns = [c.value for c in rca_income_service_data.columns]
+    rca_income_service_robustness__screen_time_data = rca_income_service_robustness__screen_time_data.assign_coords(service=[s.value for s in rca_income_service_robustness__screen_time_data.service.values])
+    rca_income_service_robustness__amenity_data = rca_income_service_robustness__amenity_data.assign_coords(service=[s.value for s in rca_income_service_robustness__amenity_data.service.values])
+
+    # rca_income_service_data.to_csv(f'{folder_save}/rca_income_service.csv')
+    rca_income_service_robustness__screen_time_data.to_netcdf(f'{folder_save}/rca_income_service_robustness__screen_time.nc')
+    rca_income_service_robustness__amenity_data.to_netcdf(f'{folder_save}/rca_income_service_robustness__amenity.nc')
 
 
 if __name__ == '__main__':

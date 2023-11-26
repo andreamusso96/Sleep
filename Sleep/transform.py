@@ -28,8 +28,8 @@ def night_screen_index_and_log2_income(screen_time_data: ScreenTimeData) -> pd.D
     return nsi_and_income
 
 
-def night_screen_index_and_log2_income_robustness__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int) -> pd.DataFrame:
-    nsi_samples = robustness.night_screen_index_samples__screen_time(traffic_data=traffic_data, n_samples=n_samples, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler())
+def night_screen_index_and_log2_income_robustness__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int, sampling_technique) -> pd.DataFrame:
+    nsi_samples = robustness.night_screen_index_samples__screen_time(traffic_data=traffic_data, n_samples=n_samples, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler(), sampling_technique=sampling_technique)
     nsi_samples_grouped_by_income = _group_night_screen_index_samples_by_income_category(nsi_samples=nsi_samples, income_quantiles=income_quantiles)
     nsi_samples_mean = nsi_samples_grouped_by_income.mean(axis=1).to_frame('mean')
     nsi_samples_std = nsi_samples_grouped_by_income.std(axis=1).to_frame('std')
@@ -111,8 +111,8 @@ def rca_insee_tile_service_and_tile_geo(mobile_data: MobileData) -> gpd.GeoDataF
     return rca_and_tile_geo
 
 
-def rca_income_and_services_robustness__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int) -> xr.DataArray:
-    rca_samples = robustness.rca_income_and_service_samples__screen_time(traffic_data=traffic_data, income_quantiles=income_quantiles, n_samples=n_samples, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler())
+def rca_income_and_services_robustness__screen_time(traffic_data: TrafficData, income_quantiles: List[float], n_samples: int, sampling_technique) -> xr.DataArray:
+    rca_samples = robustness.rca_income_and_service_samples__screen_time(traffic_data=traffic_data, income_quantiles=income_quantiles, n_samples=n_samples, traffic_per_minute_sampler=robustness.service_traffic_per_minute_sampler(), sampling_technique=sampling_technique)
     return rca_samples
 
 
@@ -189,8 +189,6 @@ def compute_rca(df: pd.DataFrame) -> pd.DataFrame:
 if __name__ == '__main__':
     from visualize import figure_data_path
     td = MobileData.load_dataset(synthetic=False, insee_tiles=True)
-    # td.data = {mt.City.PARIS: td.data[mt.City.PARIS]}
-    # s = rca_insee_tile_service_and_tile_geo(mobile_data=td)
-    # s.to_file(f'{figure_data_path}/rca_insee_tile_service_and_tile_geo.geojson', driver='GeoJSON')
-    s = night_screen_index_income_category_and_tile_geo(screen_time_data=td, income_quantiles=[0.3, 0.7])
-    s.to_file(f'{figure_data_path}/nsi_income_tile_geo_trial.geojson', driver='GeoJSON')
+    res = night_screen_index_and_log2_income_robustness__screen_time(traffic_data=td, income_quantiles=[0.3, 0.7], n_samples=15, sampling_technique=robustness.SamplingTechnique.MEAN)
+    res.to_csv(f'{figure_data_path}/nsi_income_robustness__screen_time__mean_sampling.csv')
+
